@@ -70,13 +70,13 @@ class FullFoVImage:
                 valid = False
             new_hdu = fits.ImageHDU(im)
             new_hdu.header["ISVALID"] = (valid, "Was this SCA found?")
-            self.hdulist.append(new_hdu)
+            hdulist.append(new_hdu)
 
         # save collected metadata
         phdu.header["MJD"] = mjd
         phdu.header["TSTART"] = str(start_time)
 
-        self.hdulist = fits.HDUList(hdulist) # save this as an HDUList
+        self.hdulist = fits.HDUList(hdulist)  # save this as an HDUList
 
     def to_file(self, filename, overwrite=False):
         """
