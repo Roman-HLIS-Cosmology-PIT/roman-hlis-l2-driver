@@ -14,6 +14,7 @@ import asdf
 import numpy as np
 from astropy.io import fits
 from pyimcom.wcsutil import LocWCS
+from roman_datamodels.dqflags import pixel
 
 from .. import pars
 
@@ -57,7 +58,7 @@ def get_t_eff(K, tau, tbar):
 
     # get covariance matrix for current I=1.
     ngrp = len(K)
-    C = np.zeros(ngrp, ngrp)
+    C = np.zeros((ngrp, ngrp))
     for i in range(ngrp):
         C[i, :i] = C[:i, i] = tbar[:i]
         C[i, i] = tau[i]
@@ -122,19 +123,29 @@ class FullFoVImage:
                     im[:, :] = np.clip(np.rint(softbias + a["roman"]["data"] / dslope), 1, 2**16 - 1).astype(
                         np.uint16
                     )
+
+                    # saturation
+                    sat = np.where(a["roman"]["dq"] & pixel.SATURATED)
+                    im[sat] = 2**16 - 1
+
                     start_time = a["roman"]["meta"]["exposure"]["start_time"]
-                    meta = a["roman"]["meta"]  # for shorthand
-                    mjd = meta["ephemeris"]["time"]
+                    mjd = a["roman"]["meta"]["ephemeris"]["time"]
 
                     # effective gain information
                     medgain = a["processinfo"]["medgain"]
-                    t_eff = get_t_eff(meta["K"], meta["tbar"], meta["tau"])
+                    pmeta = a["processinfo"]["meta"]  # for shorthand
+                    t_eff = get_t_eff(pmeta["K"], pmeta["tbar"], pmeta["tau"])
                     print("t_eff =", t_eff, "s")
 
                     # the WCS
                     if wcs_src.lower() == "l2":
-                        self.wcs = LocWCS(meta["wcs"], N=n_side)
+                        self.wcs = LocWCS(a["roman"]["meta"]["wcs"], N=n_side)
                         self.wcs.wcs_approx_sip(p_order=4)
+
+                    # get gain information
+                    eqvgain = dslope * t_eff * medgain
+                    bkgndvar1 = np.median(a["roman"]["var_rnoise"]) / dslope**2
+                    bkgndvar2 = a["processinfo"]["medsky"] / (t_eff * medgain * dslope**2)
 
             except FileNotFoundError:
                 valid = False
@@ -143,10 +154,16 @@ class FullFoVImage:
                 try:
                     with fits.open(maskfile.format(sca)) as m:
                         im[:, :] = np.where(m[0].data >= -999, im, 0)
+
+                    # for this purpose, mask the edge pixels
+                    im[0, :] = im[-1, :] = im[:, 0] = im[:, -1] = 0
+
                     mask = True
                 except FileNotFoundError:
                     valid = False
                 # masked data is now 0's
+
+            print("masked =", np.count_nonzero(im == 0), "saturated =", np.count_nonzero(im == 2**16 - 1))
 
             new_hdu = fits.ImageHDU(im, name=f"WFI{sca:02d}")
             new_hdu.header["ISVALID"] = (valid, "Was this SCA found?")
@@ -157,12 +174,10 @@ class FullFoVImage:
             new_hdu.header["ERRMAP"] = ("NULL", "Error map name")
 
             # add noise information
-            eqvgain = dslope * t_eff * medgain
-            bkgndvar1 = np.median(a["roman"]["var_rnoise"]) / dslope**2
-            bkgndvar2 = a["processinfo"]["medsky"] / (t_eff * medgain * dslope**2)
-            print(f"g_eqv = {eqvgain}, variance {bkgndvar1} from read, {bkgndvar2} from sky Poisson")
-            new_hdu.header["EQVGAIN"] = (eqvgain, "Equivalent gain in weighted electrons per int in file")
-            new_hdu.header["BKGNDVAR"] = (bkgndvar1 + bkgndvar2, "Variance at background level")
+            if valid:
+                print(f"g_eqv = {eqvgain}, variance {bkgndvar1} from read, {bkgndvar2} from sky Poisson")
+                new_hdu.header["EQVGAIN"] = (eqvgain, "Equivalent gain in weighted electrons per int in file")
+                new_hdu.header["BKGNDVAR"] = (bkgndvar1 + bkgndvar2, "Variance at background level")
 
             # add WCS
             if self.wcs is not None:
