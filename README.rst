@@ -5,4 +5,4 @@ Level 2 Processing Tools
 
 Documents available:
 
-* `Full field of view map information <docs/ffov.rst>`_.
+* `Full field of view map information <docs/ffovmaps.rst>`_.
