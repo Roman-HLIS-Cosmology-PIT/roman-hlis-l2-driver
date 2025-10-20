@@ -1,0 +1,10 @@
+# Changes here will be overwritten by Copier
+_commit: v2.1.0
+_src_path: gh:lincc-frameworks/python-project-template
+author_email: hirata.10@osu.edu
+author_name: Roman HLIS Cosmology PIT
+custom_install: false
+package_name: roman_hlis_l2_driver
+project_license: MIT
+project_name: roman-hlis-l2-driver
+project_organization: Roman-HLIS-Cosmology-PIT

@@ -1,0 +1,8 @@
+numpy
+scipy
+astropy
+gwcs
+galsim
+fitsio
+asdf
+pyimcom @ git+https://github.com/Roman-HLIS-Cosmology-PIT/pyimcom
