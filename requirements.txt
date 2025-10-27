@@ -5,4 +5,5 @@ gwcs
 galsim
 fitsio
 asdf
+roman_datamodels
 pyimcom @ git+https://github.com/Roman-HLIS-Cosmology-PIT/pyimcom
