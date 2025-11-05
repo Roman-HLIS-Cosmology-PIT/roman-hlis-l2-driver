@@ -10,6 +10,8 @@ FullFoVImageFromFile
 
 """
 
+import warnings
+
 import asdf
 import numpy as np
 from astropy.io import fits
@@ -132,7 +134,11 @@ class FullFoVImage:
                     mjd = a["roman"]["meta"]["ephemeris"]["time"]
 
                     # effective gain information
-                    medgain = a["processinfo"]["medgain"]
+                    try:
+                        medgain = a["processinfo"]["medgain"]
+                    except KeyError:
+                        warnings.warn("Couldn't find median gain, switching to default value.")
+                        medgain = pars.ref_gain
                     pmeta = a["processinfo"]["meta"]  # for shorthand
                     t_eff = get_t_eff(pmeta["K"], pmeta["tbar"], pmeta["tau"])
                     print("t_eff =", t_eff, "s")

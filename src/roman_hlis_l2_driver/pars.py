@@ -12,3 +12,6 @@ n_side = Stn.sca_nside
 
 # if this isn't true, we'll have a problem
 assert len(Stn.SCAFov) >= n_sca
+
+# gain information
+ref_gain = 1.458
