@@ -4,7 +4,7 @@ Star catalog reader.
 Classes
 -------
 StarCat
-    Class to build an external star catalog with objects that will near this observation.
+    Class to build an external star catalog with objects that will be near this observation.
 
 """
 
@@ -22,7 +22,7 @@ from .. import pars
 
 class StarCat:
     """
-    Class to build an external star catalog with objects that will near this observation.
+    Class to build an external star catalog with objects that will be near this observation.
 
     Parameters
     ----------
