@@ -84,6 +84,11 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
     clearfiles = glob.glob(os.path.join(cfg["DSOUT"][0] + "/masks", "*_mask.fits"))
     clearfiles += glob.glob(os.path.join(cfg["DSOUT"][0] + "/masks", "*_mask.fits.lock"))
     clearfiles += glob.glob(os.path.join(cfg["DSOUT"][0], "*.fits"))
+    if noiseid is None:
+        # files to clear only the first time; these are reused for each noise layer
+        clearfiles += glob.glob(os.path.join(cfg["DSOUT"][0], "ovmat.npy"))
+        clearfiles += glob.glob(os.path.join(cfg["DSOUT"][0], "SCA_list.txt"))
+        clearfiles += glob.glob(os.path.join(cfg["DSOUT"][0], "*.out"))
     if verbose:
         print("Clearing files:")
         for f in clearfiles:
@@ -120,10 +125,38 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
                 )
             asdf.AsdfFile(tree=anoise_in_tree).write_to(fp[0][:-5] + "_noise.asdf")
             a_in["processinfo"]["destripe"] += 1
-            a_in["roman"]["data"] = np.copy(a_in["destripe_orig"])
-            del a_in["destripe_orig"]
             if a_in["processinfo"]["destripe"] == n_noise_layer:
+                a_in["roman"]["data"] = np.copy(a_in["destripe_orig"])
+                del a_in["destripe_orig"]
                 a_in["processinfo"]["destripe_complete"] = True
         asdf.AsdfFile(tree=a_in).write_to(fp[0])
+
+    return n_noise_layer
+
+
+def destripe_all_layers(cfg_file, verbose=False):
+    """
+    Destripe all layer from the indicated set of files (including noise).
+
+    The keyword ``file["processinfo"]["destripe_complete"]``
+    is set to True if this executes correctly.
+
+    Parameters
+    ----------
+    cfg_file : str
+        The configuration file.
+    verbose : bool, optional
+        Whether to talk a lot to the output.
+
+    Returns
+    -------
+    int
+        Number of noise layers. None if no files found.
+
+    """
+
+    n_noise_layer = destripe_one_layer(cfg_file, verbose=verbose)
+    for i_noise in range(n_noise_layer):
+        destripe_one_layer(cfg_file, noiseid=i_noise, verbose=verbose)
 
     return n_noise_layer
