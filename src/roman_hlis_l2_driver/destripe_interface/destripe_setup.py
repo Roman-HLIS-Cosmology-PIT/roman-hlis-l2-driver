@@ -1,13 +1,55 @@
+import concurrent.futures
 import os
 import sys
 
 import asdf
+import numpy as np
 from astropy.io import fits
 from pyimcom.config import Settings as Stn
 from pyimcom.wcsutil import LocWCS
 
 
-def setup_all_files(fprefix, outprefix, max_files=None, wcs_order=4, verbose=False):
+def _setup_one_file(args):
+    """
+    Converts one file + ancillary information to FITS.
+    """
+
+    fp, outprefix, N, noiseid, wcs_order, verbose = args
+
+    # convert the file to FITS, including 4th order TAN-SIP approximation
+    outfile = outprefix + fp[1] + ".fits"
+    with asdf.open(fp[0]) as input_file:
+        # the WCS
+        this_wcs = LocWCS(input_file["roman"]["meta"]["wcs"], N=N)  # Stn.sca_nside)
+        this_wcs.wcs_approx_sip(p_order=wcs_order)
+
+        # the main data
+        if noiseid is None:
+            phdu = fits.PrimaryHDU(
+                input_file["roman"]["data"], header=this_wcs.approx_wcs.to_header(relax=True)
+            )
+        else:
+            if verbose:
+                print("Getting noise from", fp[0][:-5] + "_noise.asdf")
+                sys.stdout.flush()
+            with asdf.open(fp[0][:-5] + "_noise.asdf") as noise_file:
+                phdu = fits.PrimaryHDU(
+                    input_file["roman"]["data"] + noise_file["noise"][noiseid, :, :].astype(np.float32),
+                    header=this_wcs.approx_wcs.to_header(relax=True),
+                )
+
+        # the mask
+        mfname = fp[0][:-5] + "_mask.fits"
+        with fits.open(mfname) as mf:
+            if verbose:
+                print(">>", outfile)
+                print("    mask file:", mfname)
+                print("    max WCS polynomial fit error:", this_wcs.wcs_max_err, "pix")
+                sys.stdout.flush()
+            fits.HDUList([phdu, mf[1]]).writeto(outfile, overwrite=True)
+
+
+def setup_all_files(fprefix, outprefix, max_files=None, wcs_order=4, noiseid=None, verbose=False):
     """
     Gets all the files starting with the specified format.
 
@@ -25,12 +67,16 @@ def setup_all_files(fprefix, outprefix, max_files=None, wcs_order=4, verbose=Fal
         If provided, sets a maximum number of files (for testing).
     wcs_order : int, optional
         The polynomial fitting order for the TAN-SIP WCS.
+    noiseid : int, optional
+        If specified, which noise layer to add from the
+        fprefix + (numbers and underscores) + "_noise.asdf" file.
     verbose : bool, optional
         If True, print lots of data to the output.
 
     Returns
     -------
-    None
+    list of (str, str)
+        The list of file names selected and substrings ("obsid_sca").
 
     """
 
@@ -46,27 +92,11 @@ def setup_all_files(fprefix, outprefix, max_files=None, wcs_order=4, verbose=Fal
         if f[:n] == fileprefix and f[-5:] == ".asdf" and all(c in numus for c in f[n:-5]):
             use_files.append((os.path.join(fdir, f), f[n:-5]))
 
-    for fp in use_files:
-        # convert the file to FITS, including 4th order TAN-SIP approximation
-        outfile = outprefix + fp[1] + ".fits"
-        with asdf.open(fp[0]) as input_file:
-            # the WCS
-            this_wcs = LocWCS(input_file["roman"]["meta"]["wcs"], N=Stn.sca_nside)
-            this_wcs.wcs_approx_sip(p_order=wcs_order)
+    use_files2 = [(fp, outprefix, Stn.sca_nside, noiseid, wcs_order, verbose) for fp in use_files]
+    with concurrent.futures.ProcessPoolExecutor() as e:
+        e.map(_setup_one_file, use_files2)
 
-            # the main data
-            phdu = fits.PrimaryHDU(
-                input_file["roman"]["data"], header=this_wcs.approx_wcs.to_header(relax=True)
-            )
-
-            # the mask
-            mfname = fp[0][:-5] + "_mask.fits"
-            with fits.open(mfname) as mf:
-                if verbose:
-                    print(">>", outfile)
-                    print("    mask file:", mfname)
-                    print("    max WCS polynomial fit error:", this_wcs.wcs_max_err, "pix")
-                fits.HDUList([phdu, mf[1]]).writeto(outfile, overwrite=True)
+    return use_files
 
 
 # Simple case on OSC:
@@ -75,4 +105,9 @@ def setup_all_files(fprefix, outprefix, max_files=None, wcs_order=4, verbose=Fal
 if __name__ == "__main__":
     file_prefix = sys.argv[1]
     out_prefix = sys.argv[2]
-    setup_all_files(file_prefix, out_prefix, max_files=4, wcs_order=3, verbose=True)
+    if len(sys.argv) > 3:
+        setup_all_files(
+            file_prefix, out_prefix, max_files=4, wcs_order=3, noiseid=int(sys.argv[3]), verbose=True
+        )
+    else:
+        setup_all_files(file_prefix, out_prefix, max_files=4, wcs_order=3, verbose=True)
