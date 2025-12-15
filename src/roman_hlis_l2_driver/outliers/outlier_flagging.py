@@ -16,6 +16,8 @@ from scipy.interpolate import RegularGridInterpolator
 from scipy.ndimage import maximum_filter
 from scipy.signal import convolve2d
 
+from ..name_util import stem_l2
+
 
 def _load_img_wcs(arg):
     """Simple utility to load WCSs in parallel."""
@@ -208,11 +210,7 @@ class OutlierMap:
         filter = Stn.RomanFilters[cfg["FILTER"]]
 
         # add tails as needed
-        if file_format == "L2_2506":
-            file_prefix += f"/sim_L2_{filter:s}"
-        else:
-            print("Please add the new format to outlier_flagging.")
-            raise ValueError(f"unsupported format in outlier_flagging: {file_format}")
+        file_prefix += stem_l2(file_format, filter)
 
         fdir, fileprefix = os.path.split(file_prefix)
         n = len(fileprefix)
