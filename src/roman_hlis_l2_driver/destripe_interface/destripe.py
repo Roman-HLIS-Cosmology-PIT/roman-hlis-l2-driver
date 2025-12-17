@@ -10,6 +10,7 @@ from astropy.io import fits
 from pyimcom import imdestripe
 from pyimcom.config import Settings as Stn
 
+from ..name_util import stem_l2
 from .destripe_setup import setup_all_files
 
 
@@ -48,11 +49,7 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
     out_prefix = cfg["DSOBSFILE"] + filter
 
     # add tails as needed
-    if file_format == "L2_2506":
-        file_prefix += f"/sim_L2_{filter:s}"
-    else:
-        print("Please add the new format to destripe.")
-        raise ValueError(f"unsupported format in destripe: {file_format}")
+    file_prefix += stem_l2(file_format, filter)
     if verbose:
         print("File prefix =", file_prefix)
 
