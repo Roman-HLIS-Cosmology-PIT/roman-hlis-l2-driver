@@ -13,8 +13,17 @@ in the Level 2.1 files.
 
 import sys
 
+# import numpy as np
+# from astropy.io import fits
 from roman_hlis_l2_driver.destripe_interface.destripe import destripe_all_layers
 from roman_hlis_l2_driver.outliers.outlier_flagging import OutlierMap
 
+# u = OutlierMap(sys.argv[1], max_workers=24)
+# mask, out = u.outlier_mask(84)
+# mask = mask.astype(np.int8)
+# fits.PrimaryHDU(out).writeto("im1.fits", overwrite=True)
+# fits.PrimaryHDU(mask).writeto("ma1.fits", overwrite=True)
+# del u
+
 destripe_all_layers(sys.argv[1], verbose=True)
-OutlierMap(sys.argv[1], max_workers=12, run_and_save=sys.argv[2])
+OutlierMap(sys.argv[1], max_workers=27, run_and_save=sys.argv[2])
