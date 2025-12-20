@@ -511,8 +511,7 @@ class OutlierMap:
 
         # 1/3 as many workers since this is memory intensive
         with ThreadPoolExecutor(max_workers=(self.max_workers + 2) // 3) as e:
-            # e.map(_outlier_mask, list(range(len(ilist))))
-            e.map(_outlier_mask, list(range(100)))
+            e.map(_outlier_mask, list(range(len(ilist))))
 
     def save_data(self, outfile, update=False, verbose=False):
         """
