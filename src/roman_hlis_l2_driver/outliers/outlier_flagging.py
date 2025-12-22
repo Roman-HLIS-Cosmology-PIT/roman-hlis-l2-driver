@@ -46,7 +46,7 @@ def _blot(arr, a=0.25):
     """
     Two-axis in-place blotting of an array to suppress aliasing.
 
-    The kernel is (a, 1-2a, a) on each axis; the default of a=0.25 leads to
+    The kernel is (a, 1-2a, a) on each axis. Here a=0.25 leads to
     zero response at 0.5 cy/pix.
 
     Parameters
@@ -139,7 +139,7 @@ def update_files(info, verbose=False):
         if "mask" not in mytree:
             mytree["mask"] = np.zeros((Stn.sca_nside, Stn.sca_nside), dtype=np.uint8)
         with fits.open(fj[:-5] + "_mask.fits") as f:
-            mytree["mask"] &= ~np.uint8(1)
+            mytree["mask"] &= ~np.uint8(3)
             mytree["mask"] |= np.where(f["MASK"].data > 0, 1, 0).astype(np.uint8)
         mytree["mask"] |= info["mask"][j, :, :].astype(np.uint8) << 1
         mytree["processinfo"]["outlier_complete"] = True
@@ -356,7 +356,18 @@ class OutlierMap:
 
         return out
 
-    def outlier_mask(self, iobs, cut_c=5.0, cut_m=0.2, cut_g=0.2, star_flux=300.0, star_rad=20):
+    def outlier_mask(
+        self,
+        iobs,
+        cut_c=4.0,
+        cut_m=0.2,
+        cut_g=0.2,
+        dyn4=0.2,
+        dyn8=0.1,
+        star_flux=300.0,
+        star_rad=20,
+        mdscale=0.333333,
+    ):
         """
         Constructs an outlier mask.
 
@@ -366,11 +377,16 @@ class OutlierMap:
             The SCA number to mask.
         cut_c, cut_m, cut_g : float, optional
             The value from median at which to cut as an outlier.
+        dyn4, dyn8 : float, optional
+            "Save" pixels whose outlier rate is less than this times the brightest pixel in the median
+            blot in a 4- or 8-pixel radius.
         star_flux : float, optional
             "Saves" pixels around stars that are this bright (so we don't mask the inner
             diffraction spikes).
         star_rad : int, optional
             Radius around the star (in native pixels) for the cut above.
+        mdscale : float, optional
+            Cut if the image multiplied by this factor is above the median image by more than the noise.
 
         Returns
         -------
@@ -398,19 +414,39 @@ class OutlierMap:
 
           * `cut_g` times the gradient image
 
+          and it should be at least `dyn4` / `dyn8` times the brightest pixel in a 4 / 8-pixel radius.
+
         At the end, it is grown by one pixel in every direction (including diagonal).
+
+        Pixels are then "saved" if close to a bright star as determined by `star_flux` and `star_rad`
+        (this prevents the stars from themselves being masked, and then we don't know they are there).
+
+        There is also a single pixel level masking stage where the pixel is cut if it is above
+        the smoothed median mask by at least `cut_c` interquartile ranges.
 
         """
 
         iqr = np.nanpercentile(self.image[iobs], 75) - np.nanpercentile(self.image[iobs], 25)
-        print(iqr)
         out = self.overlap(iobs)  # the overlap cube from this image.
+
         diff = np.clip(
             np.maximum(self.image[iobs] - out[2, :, :], out[3, :, :] - self.image[iobs]), 0, None
         )  # diff from either max or min
         cutim = cut_c * iqr + cut_m * np.clip(out[1, :, :], 0.0, None) + cut_g * out[4, :, :]
         mask = diff > cutim
-        del diff, cutim
+        del cutim
+
+        # clipping based on 5-pixel radius
+        R = 4
+        s = np.arange(-R, R + 1)
+        dx_, dy_ = np.meshgrid(s, s)
+        mask &= diff > dyn4 * maximum_filter(out[1, :, :], footprint=dx_**2 + dy_**2 < R**2)
+        R = 8
+        s = np.arange(-R, R + 1)
+        dx_, dy_ = np.meshgrid(s, s)
+        mask &= diff > dyn8 * maximum_filter(out[1, :, :], footprint=dx_**2 + dy_**2 < R**2)
+        del diff
+
         mask &= out[0, :, :] >= 2  # only mask if there are at least 2 others in constructing the median
         mask &= np.logical_not(self.mask[iobs])  # don't mask if the pixel is already masked
 
@@ -418,12 +454,25 @@ class OutlierMap:
         # (ensures that if this pixel was masked because of a problem with one of its neighbors that was not
         # previously masked, and then "grew" into this pixel via blotting, that pixel will be masked)
         _blot_mask(mask)
+
+        # see if this pixel is surrounded by masked pixels
+        # mask |= convolve(self.mask_noblot[iobs].astype(np.int8), np.ones((3,3), dtype=np.int8),
+        #   mode="same", method="direct") >= surround
+
+        # if too bright relative to median image
+        with asdf.open(self.files[iobs]) as a:
+            mask |= np.logical_and(
+                a["roman"]["data"] * mdscale > out[1, :, :] + cut_c * iqr, out[0, :, :] >= 2
+            )
+
         mask &= np.logical_not(self.mask_noblot[iobs])  # don't mask if the pixel is already masked
 
         # now clear inner regions from bright stars
         s = np.arange(-star_rad, star_rad + 1)
         dx_, dy_ = np.meshgrid(s, s)
         mask &= maximum_filter(out[1, :, :] > star_flux, footprint=dx_**2 + dy_**2 <= star_rad**2) == 0
+
+        print(iobs, self.files[iobs], iqr, np.count_nonzero(mask))
 
         return mask, out
 
