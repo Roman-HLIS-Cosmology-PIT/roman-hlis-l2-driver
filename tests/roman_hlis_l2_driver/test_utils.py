@@ -10,6 +10,6 @@ def test_get_t_eff():
     K = np.array([-1, 0, 1]).astype(np.float32) / 6.0
     tau = 3.0 * np.arange(2, 5).astype(np.float32)
     tbar = 3.0 * np.arange(2, 5).astype(np.float32)
-    
+
     t = get_t_eff(K, tau, tbar)
     assert np.abs(t - 6.0) < 1e-3
