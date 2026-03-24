@@ -281,7 +281,7 @@ class OutlierMap:
         Returns
         -------
         np.ndarray
-            A (4, nside, nside) array; the first axis indicates:
+            A (6, nside, nside) array; the first axis indicates:
 
             - 0: the number of unmasked observations overlapping
             - 1: the median of these observations
@@ -436,7 +436,7 @@ class OutlierMap:
         mask = diff > cutim
         del cutim
 
-        # clipping based on 5-pixel radius
+        # clipping based on 4 and 8-pixel radius
         R = 4
         s = np.arange(-R, R + 1)
         dx_, dy_ = np.meshgrid(s, s)
