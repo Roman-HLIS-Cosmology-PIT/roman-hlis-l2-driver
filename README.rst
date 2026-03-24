@@ -1,3 +1,5 @@
+.. image:: https://codecov.io/gh/Roman-HLIS-Cosmology-PIT/roman-hlis-l2-driver/graph/badge.svg?token=lZlsjikXXb 
+
 Level 2 Processing Tools
 ########################
 
