@@ -3,11 +3,14 @@ Driver script for Level 2->2.1 processing.
 
 Usage::
 
-    python run_lproc.py <config> <asdf_mask>
+    python -m run_lproc.py <config> <asdf_mask>
 
 Note that the asdf_mask is just used for visualization of the full set of
 outliers masked, the mask to be passed to PyIMCOM is saved as an additional field
 in the Level 2.1 files.
+
+``-m`` added to convert to module because test is being run from Python 3.14, 
+which defaults to forkspawn.
 
 """
 
