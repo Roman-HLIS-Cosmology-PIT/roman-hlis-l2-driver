@@ -12,7 +12,7 @@ from astropy.io import fits
 from astropy.modeling import models
 from gwcs import coordinate_frames as cf
 from numpy.random import RandomState
-from roman_hlis_l2_driver.fullfovexport.fullfov import FullFoVImage
+from roman_hlis_l2_driver.fullfovexport.fullfov import FullFoVImage, FullFoVImageFromFile
 
 # CD and CRPIX values for linear approximations to the SCA WCSs.
 wcsdata = np.array(
