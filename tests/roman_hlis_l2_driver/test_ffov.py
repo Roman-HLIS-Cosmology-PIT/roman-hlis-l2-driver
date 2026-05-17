@@ -388,7 +388,7 @@ def test_ffov(tmp_path):
     ff = FullFoVImageFromFile(tmp_path + "/testffov.fits")
     for sca in range(1, 19):
         if sca != 11:
-            d = ff[sca].data
+            d = ff.hdulist[sca].data
             for j in range(5):
                 x = np.median(d[100:120, 500 - 25 * j : 520 - 25 * j])
                 if (sca >> j) & 1:
