@@ -10,6 +10,8 @@ FullFoVImageFromFile
 
 """
 
+import copy
+
 import asdf
 import numpy as np
 from astropy.io import fits
@@ -225,5 +227,5 @@ class FullFoVImageFromFile(FullFoVImage):
 
     def __init__(self, infile):
         with fits.open(infile, memmap=False) as f:
-            self.hdulist = f
+            self.hdulist = copy.deepcopy(f)
             # turn off memmap so that there are no references to disk after this
