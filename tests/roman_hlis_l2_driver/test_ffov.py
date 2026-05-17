@@ -383,3 +383,15 @@ def test_ffov(tmp_path):
         ra, dec = sca16wcs.pixel_to_world_values(4087, 4087)
         print(ra, dec)
         assert np.hypot(ra - 149.6787, dec + 19.8572) < 0.001
+
+    # Similar but check that FullFoVImageFromFile works
+    ff = FullFoVImageFromFile(tmp_path + "/testffov.fits")
+    for sca in range(1, 19):
+        if sca != 11:
+            d = ff[sca].data
+            for j in range(5):
+                x = np.median(d[100:120, 500 - 25 * j : 520 - 25 * j])
+                if (sca >> j) & 1:
+                    assert 1170 <= x <= 1200
+                else:
+                    assert x == 1
