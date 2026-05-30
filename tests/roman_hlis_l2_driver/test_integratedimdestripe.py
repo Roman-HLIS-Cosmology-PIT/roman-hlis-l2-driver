@@ -9,6 +9,7 @@ import asdf
 import numpy as np
 from astropy.io import fits
 from roman_hlis_l2_driver.destripe_interface import destripe
+from roman_hlis_l2_driver.outliers import outlier_flagging
 
 # Example configuration file.
 # Note that we will replace $TMPDIR.
@@ -187,6 +188,16 @@ def test_integrated(tmp_path):
     )
     assert np.all(np.abs(ratio - ratio_target) < 0.2)
 
+    # now run outliers!
+    # this test won't actually flag anything because of insufficient overlap, but it exercises the mechanics
+    outlier_flagging.OutlierMap(tmp_path + "/cfg.txt", max_workers=2, run_and_save=tmp_path + "/mask_F1.asdf")
+    with asdf.open(tmp_path + "/mask_F1.asdf") as a:
+        assert a["N"] == 3
+        assert len(a["files"]) == 3
+        assert a["files"][0][-24:] == "sim_L2_F184_1433_11.asdf"
+        assert np.shape(a["mask"]) == (3, 4088, 4088)
+        assert np.all(np.abs(a["overlap"] - mtarget) < 0.02)
+
     # now clear old files (this part also asserts that they exist!)
     delfiles = [
         "ds-F/F184_DS_14844_6.fits",
@@ -204,3 +215,7 @@ def test_integrated(tmp_path):
     for df in cpath:
         df2 = df[:-3] if df[-3:] == ".gz" else df
         os.remove(tmp_path + "/L2/" + df2)
+
+
+if __name__ == "__main__":
+    test_integrated("out")
