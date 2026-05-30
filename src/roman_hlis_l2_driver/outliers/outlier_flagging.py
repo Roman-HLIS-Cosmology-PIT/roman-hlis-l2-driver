@@ -12,8 +12,7 @@ from astropy.io import fits
 from pyimcom.config import Settings as Stn
 from pyimcom.utils.compareutils import get_overlap_matrix, map_sca2sca
 from pyimcom.wcsutil import PyIMCOM_WCS
-from scipy.interpolate import RegularGridInterpolator
-from scipy.ndimage import maximum_filter
+from scipy.ndimage import map_coordinates, maximum_filter
 from scipy.signal import convolve2d
 
 from ..name_util import stem_l2
@@ -303,24 +302,16 @@ class OutlierMap:
             if jobs == iobs:
                 continue  # don't compare to yourself!
             x_target, y_target, is_in_ref = map_sca2sca(self.wcs[iobs], self.wcs[jobs], pad=0)
-            coords = np.column_stack((y_target.ravel(), x_target.ravel()))
-            interpolator = RegularGridInterpolator(
-                (np.arange(Stn.sca_nside), np.arange(Stn.sca_nside)),
-                self.image[jobs, :, :],
-                method="linear",
-                bounds_error=False,
-                fill_value=0.0,
+            coords = np.row_stack((y_target.ravel(), x_target.ravel()))
+            interp_data = map_coordinates(self.image[jobs, :, :], coords, order=1).reshape(
+                (Stn.sca_nside, Stn.sca_nside)
             )
-            interp_data = interpolator(coords).reshape((Stn.sca_nside, Stn.sca_nside))
-            interpolator = RegularGridInterpolator(
-                (np.arange(Stn.sca_nside), np.arange(Stn.sca_nside)),
-                1.0 - self.mask[jobs, :, :],
-                method="linear",
-                bounds_error=False,
-                fill_value=0.0,
+            interp_good = (
+                map_coordinates(1.0 - self.mask[jobs, :, :], coords, order=1)
+                .reshape((Stn.sca_nside, Stn.sca_nside))
+                .reshape((Stn.sca_nside, Stn.sca_nside))
+                > 1e-9
             )
-            interp_good = interpolator(coords).reshape((Stn.sca_nside, Stn.sca_nside)) > 1e-9
-            del interpolator
             ct += interp_good
             if np.any(ct > ns):
                 ns = ns + 1
