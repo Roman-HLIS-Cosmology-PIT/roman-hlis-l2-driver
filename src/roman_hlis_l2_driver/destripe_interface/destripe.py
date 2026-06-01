@@ -19,8 +19,7 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
     Destripes one layer from the indicated set of files.
 
     The data in the files are *overwritten* and the ``processinfo`` leaf gets a new
-    field: ``file["processinfo"]["destripe"]`` gives the number of
-    noise layers that have been destriped, and ``file["processinfo"]["destripe_complete"]``
+    field: ``file["processinfo"]["destripe_complete"]``
     is set to True if everything has been destriped.
 
     Parameters
@@ -37,6 +36,11 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
     -------
     int or None
         Number of noise layers. None if no files found.
+
+    Notes
+    -----
+    A previous version of this function placed a progress indicator in the ASDF file,
+    but we turned this off because it was taking too long.
 
     """
 
@@ -104,6 +108,9 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
 
     # now copy back
     for fp in use_files:
+        if verbose:
+            print("copy back", fp)
+            sys.stdout.flush()
         if noiseid is None:
             with asdf.open(fp[0], mode="r", lazy_load=False) as a:
                 a_in = copy.deepcopy(a.tree)
@@ -111,22 +118,20 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
             a_in["processinfo"]["destripe_complete"] = False
             with fits.open(dsout + fp[1] + ".fits") as f:
                 a_in["destripe_orig"] = f[0].data.astype(np.float32)
+            asdf.AsdfFile(tree=a_in).write_to(fp[0])
         else:
-            with asdf.open(fp[0], mode="r", lazy_load=False) as a:
-                a_in = copy.deepcopy(a.tree)
             with fits.open(dsout + fp[1] + ".fits") as f:
-                with asdf.open(fp[0][:-5] + "_noise.asdf", mode="rw") as anoise_in:
-                    anoise_in_tree = copy.deepcopy(anoise_in.tree)
-                anoise_in_tree["noise"][noiseid, :, :] = (f[0].data - a_in["destripe_orig"]).astype(
-                    np.float16
-                )
-            asdf.AsdfFile(tree=anoise_in_tree).write_to(fp[0][:-5] + "_noise.asdf")
-            a_in["processinfo"]["destripe"] += 1
-            if a_in["processinfo"]["destripe"] == n_noise_layer:
+                with asdf.open(fp[0][:-5] + "_noise.asdf", memmap=True) as anoise_in:
+                    arr = anoise_in["noise"]
+                    arr[noiseid, :, :] = (f[0].data - a_in["destripe_orig"]).astype(np.float16)
+            if noiseid == n_noise_layer - 1:
+                # last noise layer
+                with asdf.open(fp[0], mode="r", lazy_load=False) as a:
+                    a_in = copy.deepcopy(a.tree)
                 a_in["roman"]["data"] = np.copy(a_in["destripe_orig"])
                 del a_in["destripe_orig"]
                 a_in["processinfo"]["destripe_complete"] = True
-        asdf.AsdfFile(tree=a_in).write_to(fp[0])
+                asdf.AsdfFile(tree=a_in).write_to(fp[0])
 
     return n_noise_layer
 

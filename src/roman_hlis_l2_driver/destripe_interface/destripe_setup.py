@@ -93,7 +93,8 @@ def setup_all_files(fprefix, outprefix, max_files=None, wcs_order=4, noiseid=Non
             use_files.append((os.path.join(fdir, f), f[n:-5]))
 
     use_files2 = [(fp, outprefix, Stn.sca_nside, noiseid, wcs_order, verbose) for fp in use_files]
-    with concurrent.futures.ProcessPoolExecutor() as e:
+    max_workers = int(os.environ.get("SLURM_CPUS_PER_TASK", 1))
+    with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as e:
         e.map(_setup_one_file, use_files2)
 
     return use_files
