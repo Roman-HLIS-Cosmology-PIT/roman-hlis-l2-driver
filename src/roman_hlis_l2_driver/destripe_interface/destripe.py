@@ -128,12 +128,18 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
                 del a_in["destripe_orig"]
                 a_in["processinfo"]["destripe_complete"] = True
                 asdf.AsdfFile(tree=a_in).write_to(fp[0])
-        return 0
 
     # execute one outside the executor for code coverage
     _cp(use_files[0])
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as e:
-        e.map(use_files[1:])
+        iter = e.map(_cp, use_files[1:])
+        while True:
+            try:
+                next(iter)
+            except StopIteration:
+                break  # End of iterator
+            except Exception as exc:
+                raise RuntimeError("file copyback error") from exc
 
     return n_noise_layer
 
