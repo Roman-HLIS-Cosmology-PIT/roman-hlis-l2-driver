@@ -71,16 +71,6 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
     if verbose:
         print("Number of noise layers:", n_noise_layer)
 
-    # check we're in the right place
-    if noiseid is not None:
-        for fp in use_files:
-            with asdf.open(fp[0], mode="rw") as a_in:
-                if a_in["processinfo"]["destripe"] != noiseid:
-                    raise ValueError(
-                        f'Destriping counter not at the right noise field: '
-                        f'expected {a_in["processinfo"]["destripe"]}, got {noiseid}'
-                    )
-
     # cleanup output directory (except for overlap matrices)
     clearfiles = glob.glob(os.path.join(cfg["DSOUT"][0] + "/masks", "*_mask.fits"))
     clearfiles += glob.glob(os.path.join(cfg["DSOUT"][0] + "/masks", "*_mask.fits.lock"))
