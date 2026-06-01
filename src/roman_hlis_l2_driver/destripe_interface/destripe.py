@@ -113,8 +113,10 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
             with fits.open(dsout + fp[1] + ".fits") as f:
                 with asdf.open(fp[0][:-5] + "_noise.asdf", mode="rw", memmap=True) as anoise_in:
                     with asdf.open(fp[0], memmap=True) as aorig:
-                        arr = anoise_in["noise"]
-                        arr[noiseid, :, :] = (f[0].data - aorig["destripe_orig"]).astype(np.float16)
+                        anoise_in["noise"][noiseid, :, :] = (f[0].data - aorig["destripe_orig"]).astype(
+                            np.float16
+                        )
+                    anoise_in.update()
             if noiseid == n_noise_layer - 1:
                 # last noise layer
                 with asdf.open(fp[0], mode="r", lazy_load=False) as a:
