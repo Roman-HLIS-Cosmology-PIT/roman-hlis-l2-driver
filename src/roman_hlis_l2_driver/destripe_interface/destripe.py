@@ -115,6 +115,7 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
                     with asdf.open(fp[0], memmap=True) as aorig:
                         arr = anoise_in["noise"]
                         arr[noiseid, :, :] = (f[0].data - aorig["destripe_orig"]).astype(np.float16)
+                        arr.flush()
             if noiseid == n_noise_layer - 1:
                 # last noise layer
                 with asdf.open(fp[0], mode="r", lazy_load=False) as a:
