@@ -132,7 +132,6 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
                 with asdf.open(fp[0], mode="r", lazy_load=False) as a:
                     a_in = copy.deepcopy(a.tree)
                 a_in["roman"]["data"][:, :] = im
-                del a_in["destripe_orig"]
                 a_in["processinfo"]["destripe_complete"] = True
                 asdf.AsdfFile(tree=a_in).write_to(fp[0])
                 with asdf.open(fp[0][:-5] + "_noise.asdf", mode="r", lazy_load=False) as a:
