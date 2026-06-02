@@ -121,9 +121,12 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
                 )
             else:
                 noise_ds = np.memmap(
-                    dsout + fp[1] + "_noise.npy", mode="r+", shape=(n_noise_layer, nside, nside)
+                    dsout + fp[1] + "_noise.npy",
+                    dtype=np.float16,
+                    mode="r+",
+                    shape=(n_noise_layer, nside, nside),
                 )
-            im = np.memmap(dsout + fp[1] + "_image.npy", mode="r", shape=(nside, nside))
+            im = np.memmap(dsout + fp[1] + "_image.npy", dtype=np.float32, mode="r", shape=(nside, nside))
             with fitsio.FITS(dsout + fp[1] + ".fits") as f:
                 noise_ds[noiseid, :, :] = f[0][:, :] - im
                 noise_ds.flush()
