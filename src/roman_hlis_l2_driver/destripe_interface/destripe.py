@@ -123,26 +123,25 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
                 noise_ds = np.memmap(
                     dsout + fp[1] + "_noise.npy", mode="r+", shape=(n_noise_layer, nside, nside)
                 )
+            im = np.memmap(dsout + fp[1] + "_image.npy", mode="r", shape=(nside, nside))
             with fitsio.FITS(dsout + fp[1] + ".fits") as f:
-                im = np.memmap(dsout + fp[1] + "_image.npy", mode="r", shape=(nside, nside))
                 noise_ds[noiseid, :, :] = f[0][:, :] - im
-                del im
                 noise_ds.flush()
             if noiseid == n_noise_layer - 1:
                 # last noise layer -- copy back, write as an ASDF file
                 with asdf.open(fp[0], mode="r", lazy_load=False) as a:
                     a_in = copy.deepcopy(a.tree)
-                a_in["roman"]["data"] = im
+                a_in["roman"]["data"][:, :] = im
                 del a_in["destripe_orig"]
                 a_in["processinfo"]["destripe_complete"] = True
                 asdf.AsdfFile(tree=a_in).write_to(fp[0])
                 with asdf.open(fp[0][:-5] + "_noise.asdf", mode="r", lazy_load=False) as a:
                     a_in = copy.deepcopy(a.tree)
-                a_in["noise"] = noise_ds
+                a_in["noise"][:, :, :] = noise_ds
                 asdf.AsdfFile(tree=a_in).write_to(fp[0][:-5] + "_noise.asdf")
                 # cleanup
-                del noise_ds
                 os.remove(dsout + fp[1] + "_noise.npy")
+            del im, noise_ds
 
         # clean up image information
         if noiseid == n_noise_layer or n_noise_layer == 0:
