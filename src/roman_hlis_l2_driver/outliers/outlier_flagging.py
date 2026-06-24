@@ -4,11 +4,13 @@ import os
 import sys
 import warnings
 from concurrent.futures import ThreadPoolExecutor
-
+import pyarrow.parquet as pq
+import galsim
 import asdf
 import numpy as np
 import pyimcom
 from astropy.io import fits
+from astropy.coordinates import SkyCoord
 from pyimcom.config import Settings as Stn
 from pyimcom.utils.compareutils import get_overlap_matrix, map_sca2sca
 from pyimcom.wcsutil import PyIMCOM_WCS
@@ -208,6 +210,7 @@ class OutlierMap:
         file_prefix = cfg["INDATA"][0]
         file_format = cfg["INDATA"][1]
         filter = Stn.RomanFilters[cfg["FILTER"]]
+        star_catalog = cfg["STAR_CATALOG"]  # KL 
 
         # add tails as needed
         file_prefix += stem_l2(file_format, filter)
@@ -222,6 +225,7 @@ class OutlierMap:
             if len(self.files) == max_files:
                 break
         self.n_obs = len(self.files)
+        self.star_catalog = star_catalog  # KL
 
         print(self.n_obs)
 
@@ -298,6 +302,27 @@ class OutlierMap:
         ct = np.zeros((Stn.sca_nside, Stn.sca_nside), dtype=np.uint8)
         ns = 1
 
+        # KL
+        # filter star catalog to include only stars within this SCA's ra, dec limits
+        if self.star_catalog is not None:
+            with pq.ParquetFile(self.star_catalog) as pf:
+                star_catalog_df = pf.read().to_pandas()
+            ny, nx = Stn.sca_nside, Stn.sca_nside
+            corners = np.array([[0,  0 ], [nx, 0 ], [0,  ny], [nx, ny]])
+            sky = self.wcs[iobs].pixel_to_world(corners[:, 0], corners[:, 1])
+
+            ra  = sky.ra.deg
+            dec = sky.dec.deg
+
+            ra_min,  ra_max  = ra.min(),  ra.max()
+            dec_min, dec_max = dec.min(), dec.max()
+
+            star_catalog_df = star_catalog_df[
+                (star_catalog_df['ra'] >= ra_min) & (star_catalog_df['ra'] <= ra_max) &
+                (star_catalog_df['dec'] >= dec_min) & (star_catalog_df['dec'] <= dec_max)
+            ]
+
+
         # now build the set of other observations
         for jobs in jlist:
             if jobs == iobs:
@@ -312,6 +337,7 @@ class OutlierMap:
                 fill_value=0.0,
             )
             interp_data = interpolator(coords).reshape((Stn.sca_nside, Stn.sca_nside))
+            
             interpolator = RegularGridInterpolator(
                 (np.arange(Stn.sca_nside), np.arange(Stn.sca_nside)),
                 1.0 - self.mask[jobs, :, :],
@@ -331,6 +357,29 @@ class OutlierMap:
                 stack[k, :, :] = np.where(
                     np.logical_and(ct == k + 1, interp_good), interp_data, stack[k, :, :]
                 )
+
+        # KL
+        if self.star_catalog is not None:
+            for index, row in star_catalog_df.iterrows():
+                x_star, y_star = self.wcs[iobs].world_to_pixel(SkyCoord(row['ra']*u.degree, row['dec']*u.degree))
+                x_star = int(x_star)
+                y_star = int(y_star)
+                if x_star < 50 or x_star > Stn.sca_nside - 50 or y_star < 50 or y_star > Stn.sca_nside - 50:
+                    continue
+                cutout_iobs = self.image[iobs, y_star-25:y_star+25, x_star-25:x_star+25]
+                cutout_interp = interp_data[y_star-25:y_star+25, x_star-25:x_star+25]
+                
+                # measure the moments using galsim hsm
+                try:
+                    hsm_iobs = galsim.hsm.FindAdaptiveMom(cutout_iobs)
+                    hsm_interp = galsim.hsm.FindAdaptiveMom(cutout_interp)
+                    star_catalog_df.loc[index, f'hsm_sigma_iobs_{iobs}'] = hsm_iobs.moments_sigma
+                    star_catalog_df.loc[index, f'hsm_centroid_iobs_{iobs}'] = hsm_iobs.moments_centroid
+                    star_catalog_df.loc[index, f'hsm_sigma_interp_{jobs}'] = hsm_interp.moments_sigma
+                    star_catalog_df.loc[index, f'hsm_centroid_interp_{jobs}'] = hsm_interp.moments_centroid
+                except Exception as e:
+                    print(f"Error measuring moments for star at index {index}: {e}")
+
 
         del interp_data
 
@@ -353,6 +402,11 @@ class OutlierMap:
 
         # fill in the observation
         out[-1, :, :] = np.where(self.mask[iobs, :, :], np.float32(np.nan), self.image[iobs, :, :])
+
+        # write star catalog to file
+        # KL need a better solution than this bc this is one per sca...
+        if self.star_catalog is not None:
+            star_catalog_df.to_parquet(f'star_catalog_with_moments_iobs_{iobs}.parquet', index=False)
 
         return out
 
