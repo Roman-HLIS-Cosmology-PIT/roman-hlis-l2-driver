@@ -48,12 +48,11 @@ def stem_mask(file_format):
     """
 
     if file_format == "L2_2506":
-
         tail = "_mask.fits"
         hdu = "MASK"
         bits = np.uint8(1)
         return tail, hdu, bits
-    
+
     else:
         print("Please add the new format to name_util.")
         raise ValueError(f"unsupported format in name_util: {file_format}")

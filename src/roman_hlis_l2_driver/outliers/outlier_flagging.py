@@ -227,9 +227,8 @@ class OutlierMap:
             if len(self.files) == max_files:
                 break
         self.n_obs = len(self.files)
-        self.fformat = file_format
-
         print(self.n_obs)
+        self.fformat = file_format
 
         # image arrays
         self.image = np.zeros((self.n_obs, Stn.sca_nside, Stn.sca_nside), dtype=np.float32)
