@@ -1,6 +1,7 @@
 """
 Utilities for file names and formats.
 """
+import numpy as np
 
 
 def stem_l2(file_format, filter):
@@ -47,7 +48,12 @@ def stem_mask(file_format):
     """
 
     if file_format == "L2_2506":
-        return f"_mask.fits"
+
+        tail = "_mask.fits"
+        hdu = "MASK"
+        bits = np.uint8(1)
+        return tail, hdu, bits
+    
     else:
         print("Please add the new format to name_util.")
         raise ValueError(f"unsupported format in name_util: {file_format}")
