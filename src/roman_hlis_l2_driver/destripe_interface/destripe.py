@@ -1,3 +1,6 @@
+"""Main driver function for imdestripe as called from Level 2-->2.1."""
+
+import concurrent.futures
 import copy
 import glob
 import json
@@ -5,8 +8,8 @@ import os
 import sys
 
 import asdf
+import fitsio
 import numpy as np
-from astropy.io import fits
 from pyimcom import imdestripe
 from pyimcom.config import Settings as Stn
 
@@ -19,8 +22,7 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
     Destripes one layer from the indicated set of files.
 
     The data in the files are *overwritten* and the ``processinfo`` leaf gets a new
-    field: ``file["processinfo"]["destripe"]`` gives the number of
-    noise layers that have been destriped, and ``file["processinfo"]["destripe_complete"]``
+    field: ``file["processinfo"]["destripe_complete"]``
     is set to True if everything has been destriped.
 
     Parameters
@@ -37,6 +39,11 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
     -------
     int or None
         Number of noise layers. None if no files found.
+
+    Notes
+    -----
+    A previous version of this function placed a progress indicator in the ASDF file,
+    but we turned this off because it was taking too long.
 
     """
 
@@ -62,20 +69,11 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
         return None
 
     # now we know there are some files
-    with asdf.open(use_files[0][0][:-5] + "_noise.asdf") as a:
+    with asdf.open(use_files[0][0][:-5] + "_noise.asdf", memmap=True) as a:
         n_noise_layer = np.shape(a["noise"])[0]
     if verbose:
         print("Number of noise layers:", n_noise_layer)
-
-    # check we're in the right place
-    if noiseid is not None:
-        for fp in use_files:
-            with asdf.open(fp[0], mode="rw") as a_in:
-                if a_in["processinfo"]["destripe"] != noiseid:
-                    raise ValueError(
-                        f'Destriping counter not at the right noise field: '
-                        f'expected {a_in["processinfo"]["destripe"]}, got {noiseid}'
-                    )
+    nside = Stn.sca_nside
 
     # cleanup output directory (except for overlap matrices)
     clearfiles = glob.glob(os.path.join(cfg["DSOUT"][0] + "/masks", "*_mask.fits"))
@@ -103,30 +101,65 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
         sys.stdout.flush()
 
     # now copy back
-    for fp in use_files:
+    def _cp(fp):
+        if verbose:
+            print("copy back", fp)
+            sys.stdout.flush()
         if noiseid is None:
-            with asdf.open(fp[0], mode="r", lazy_load=False) as a:
-                a_in = copy.deepcopy(a.tree)
-            a_in["processinfo"]["destripe"] = 0
-            a_in["processinfo"]["destripe_complete"] = False
-            with fits.open(dsout + fp[1] + ".fits") as f:
-                a_in["destripe_orig"] = f[0].data.astype(np.float32)
+            # save the destriped image as a numpy memmap
+            im = np.memmap(dsout + fp[1] + "_image.npy", dtype=np.float32, mode="w+", shape=(nside, nside))
+            with fitsio.FITS(dsout + fp[1] + ".fits") as f:
+                im[:, :] = f[0][:, :]
+                im.flush()
         else:
-            with asdf.open(fp[0], mode="r", lazy_load=False) as a:
-                a_in = copy.deepcopy(a.tree)
-            with fits.open(dsout + fp[1] + ".fits") as f:
-                with asdf.open(fp[0][:-5] + "_noise.asdf", mode="rw") as anoise_in:
-                    anoise_in_tree = copy.deepcopy(anoise_in.tree)
-                anoise_in_tree["noise"][noiseid, :, :] = (f[0].data - a_in["destripe_orig"]).astype(
-                    np.float16
+            if noiseid == 0:
+                noise_ds = np.memmap(
+                    dsout + fp[1] + "_noise.npy",
+                    dtype=np.float16,
+                    mode="w+",
+                    shape=(n_noise_layer, nside, nside),
                 )
-            asdf.AsdfFile(tree=anoise_in_tree).write_to(fp[0][:-5] + "_noise.asdf")
-            a_in["processinfo"]["destripe"] += 1
-            if a_in["processinfo"]["destripe"] == n_noise_layer:
-                a_in["roman"]["data"] = np.copy(a_in["destripe_orig"])
-                del a_in["destripe_orig"]
+            else:
+                noise_ds = np.memmap(
+                    dsout + fp[1] + "_noise.npy",
+                    dtype=np.float16,
+                    mode="r+",
+                    shape=(n_noise_layer, nside, nside),
+                )
+            im = np.memmap(dsout + fp[1] + "_image.npy", dtype=np.float32, mode="r", shape=(nside, nside))
+            with fitsio.FITS(dsout + fp[1] + ".fits") as f:
+                noise_ds[noiseid, :, :] = f[0][:, :] - im
+                noise_ds.flush()
+            if noiseid == n_noise_layer - 1:
+                # last noise layer -- copy back, write as an ASDF file
+                with asdf.open(fp[0], mode="r", lazy_load=False) as a:
+                    a_in = copy.deepcopy(a.tree)
+                a_in["roman"]["data"][:, :] = im
                 a_in["processinfo"]["destripe_complete"] = True
-        asdf.AsdfFile(tree=a_in).write_to(fp[0])
+                asdf.AsdfFile(tree=a_in).write_to(fp[0])
+                with asdf.open(fp[0][:-5] + "_noise.asdf", mode="r", lazy_load=False) as a:
+                    a_in = copy.deepcopy(a.tree)
+                a_in["noise"][:, :, :] = noise_ds
+                asdf.AsdfFile(tree=a_in).write_to(fp[0][:-5] + "_noise.asdf")
+                # cleanup
+                os.remove(dsout + fp[1] + "_noise.npy")
+            del im, noise_ds
+
+        # clean up image information
+        if noiseid == n_noise_layer or n_noise_layer == 0:
+            os.remove(dsout + fp[1] + "_image.npy")
+
+    # execute one outside the executor for code coverage
+    _cp(use_files[0])
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as e:
+        iter = e.map(_cp, use_files[1:])
+        while True:
+            try:
+                next(iter)
+            except StopIteration:
+                break  # End of iterator
+            except Exception as exc:
+                raise RuntimeError("file copyback error") from exc
 
     return n_noise_layer
 

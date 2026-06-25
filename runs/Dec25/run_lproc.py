@@ -3,7 +3,7 @@ Driver script for Level 2->2.1 processing.
 
 Usage::
 
-    python -m run_lproc.py <config> <asdf_mask>
+    python -m run_lproc <config> <asdf_mask>
 
 Note that the asdf_mask is just used for visualization of the full set of
 outliers masked, the mask to be passed to PyIMCOM is saved as an additional field
@@ -28,5 +28,6 @@ from roman_hlis_l2_driver.outliers.outlier_flagging import OutlierMap
 # fits.PrimaryHDU(mask).writeto("ma1.fits", overwrite=True)
 # del u
 
-destripe_all_layers(sys.argv[1], verbose=True)
-OutlierMap(sys.argv[1], max_workers=27, run_and_save=sys.argv[2])
+if __name__ == "__main__":
+    destripe_all_layers(sys.argv[1], verbose=True)
+    OutlierMap(sys.argv[1], max_workers=27, run_and_save=sys.argv[2])

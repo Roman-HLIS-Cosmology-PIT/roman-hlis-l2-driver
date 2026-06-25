@@ -26,9 +26,9 @@ def _load_img_wcs(arg):
 
     print(file)
     sys.stdout.flush()
-    with asdf.open(file) as a:
+    with asdf.open(file, memmap=True) as a:
         im[:, :] = a["roman"]["data"]
-        return PyIMCOM_WCS(a["roman"]["meta"]["wcs"])
+        return PyIMCOM_WCS(a["roman"]["meta"]["wcs"], use_float32=True, niter=1)
 
 
 def _load_mask(arg):
@@ -460,7 +460,7 @@ class OutlierMap:
         #   mode="same", method="direct") >= surround
 
         # if too bright relative to median image
-        with asdf.open(self.files[iobs]) as a:
+        with asdf.open(self.files[iobs], memmap=True) as a:
             mask |= np.logical_and(
                 a["roman"]["data"] * mdscale > out[1, :, :] + cut_c * iqr, out[0, :, :] >= 2
             )
