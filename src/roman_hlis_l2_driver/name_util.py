@@ -6,7 +6,7 @@ import numpy as np
 
 def stem_l2(file_format, filter):
     """
-    Utility to return the stem format for a JWST file.
+    Utility to return the stem format for an L2 file.
 
     Paramters
     ---------
