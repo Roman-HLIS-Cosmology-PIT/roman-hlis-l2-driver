@@ -16,7 +16,7 @@ from scipy.interpolate import RegularGridInterpolator
 from scipy.ndimage import maximum_filter
 from scipy.signal import convolve2d
 
-from ..name_util import stem_l2
+from ..name_util import stem_l2, stem_mask
 
 
 def _load_img_wcs(arg):
@@ -96,7 +96,7 @@ def _blot_mask(arr):
     arr[:, :] = arr2
 
 
-def update_files(info, verbose=False):
+def update_files(info, file_format, verbose=False):
     """
     Updates the mask information in the targeted files.
 
@@ -110,6 +110,9 @@ def update_files(info, verbose=False):
         - ``files`` : list of str; the files to be updated.
 
         - ``mask`` : np.ndarray of bool; the additional pixels to mask
+
+    file_format : str
+        The format type (same as used in PyIMCOM).
 
     verbose : bool, optional
         Talk to the output.
@@ -129,6 +132,8 @@ def update_files(info, verbose=False):
     """
 
     N = len(info["files"])
+    tail, hdu, _ = stem_mask(file_format)
+
     for j in range(N):
         fj = info["files"][j]
         if verbose:
@@ -138,9 +143,9 @@ def update_files(info, verbose=False):
             mytree = a.tree
         if "mask" not in mytree:
             mytree["mask"] = np.zeros((Stn.sca_nside, Stn.sca_nside), dtype=np.uint8)
-        with fits.open(fj[:-5] + "_mask.fits") as f:
+        with fits.open(fj[:-5] + tail) as f:
             mytree["mask"] &= ~np.uint8(3)
-            mytree["mask"] |= np.where(f["MASK"].data > 0, 1, 0).astype(np.uint8)
+            mytree["mask"] |= np.where(f[hdu].data > 0, 1, 0).astype(np.uint8)
         mytree["mask"] |= info["mask"][j, :, :].astype(np.uint8) << 1
         mytree["processinfo"]["outlier_complete"] = True
         asdf.AsdfFile(mytree).write_to(fj)
@@ -222,8 +227,8 @@ class OutlierMap:
             if len(self.files) == max_files:
                 break
         self.n_obs = len(self.files)
-
         print(self.n_obs)
+        self.fformat = file_format
 
         # image arrays
         self.image = np.zeros((self.n_obs, Stn.sca_nside, Stn.sca_nside), dtype=np.float32)
@@ -238,13 +243,7 @@ class OutlierMap:
         sys.stdout.flush()
 
         # mask
-        if file_format == "L2_2506":
-            tail = "_mask.fits"
-            hdu = "MASK"
-            bits = np.uint8(1)
-        else:
-            print("Please add the new format to outlier_flagging.")
-            raise ValueError(f"unsupported format in outlier_flagging: {file_format}")
+        tail, hdu, bits = stem_mask(file_format)
         self.maskfiles = [f[:-5] + tail for f in self.files]
         self.mask = np.zeros((self.n_obs, Stn.sca_nside, Stn.sca_nside), dtype=bool)
         with ThreadPoolExecutor(max_workers=max_workers) as e:
@@ -550,7 +549,7 @@ class OutlierMap:
         asdf.AsdfFile(tree).write_to(outfile)
 
         if update:
-            update_files(tree, verbose=verbose)
+            update_files(tree, self.fformat, verbose=verbose)
 
 
 # this stuff will eventually be moved to another script
