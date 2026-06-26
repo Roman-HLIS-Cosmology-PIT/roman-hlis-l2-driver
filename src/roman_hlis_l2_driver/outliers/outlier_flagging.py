@@ -9,6 +9,7 @@ import galsim
 import asdf
 import numpy as np
 import pyimcom
+import astropy.units as u
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from pyimcom.config import Settings as Stn
@@ -96,6 +97,128 @@ def _blot_mask(arr):
     arr2[:, 1:] |= arr[:, :-1]
     arr2[:, :-1] |= arr[:, 1:]
     arr[:, :] = arr2
+
+def _get_stars_in_image(star_catalog, wcs):
+    """
+    Filters the star catalog to include only stars within the RA/Dec limits of the given WCS.
+
+    Parameters
+    ----------
+    star_catalog : str
+        Path to the star catalog in Parquet format.
+    wcs : PyIMCOM_WCS
+        The WCS of the image for which we want to filter stars.
+    
+    Returns
+    -------
+    star_catalog_df : pd.DataFrame
+        A DataFrame containing only the stars that fall within the RA/Dec limits of the image.
+    """
+    with pq.ParquetFile(star_catalog) as pf:
+            star_catalog_df = pf.read().to_pandas()
+            ny, nx = Stn.sca_nside, Stn.sca_nside
+            corners = np.array([[0,  0 ], [nx, 0 ], [0,  ny], [nx, ny]])
+            sky = wcs.pixel_to_world(corners[:, 0], corners[:, 1])
+
+            ra  = sky.ra.deg
+            dec = sky.dec.deg
+
+            ra_min,  ra_max  = ra.min(),  ra.max()
+            dec_min, dec_max = dec.min(), dec.max()
+
+            star_catalog_df = star_catalog_df[
+                (star_catalog_df['ra'] >= ra_min) & (star_catalog_df['ra'] <= ra_max) &
+                (star_catalog_df['dec'] >= dec_min) & (star_catalog_df['dec'] <= dec_max)
+            ]
+    return star_catalog_df
+
+def _compare_star_moments(star_catalog_df, iobs, image, wcs, interp, jobs, debug_outputs=False):
+    """
+    Measures the moments of stars in the image and the interpolated image
+    Updates the star catalog DataFrame to contain sigma and centroid for measured stars in both images
+
+    Parameters
+    ----------
+    star_catalog_df : pd.DataFrame
+        DataFrame containing the star catalog with RA and Dec columns.
+    iobs : int
+        The index of the current observation.
+    image : np.ndarray
+        The observed image data for the current observation.
+    wcs : PyIMCOM_WCS
+        The WCS of the current observation.
+    interp : np.ndarray
+        The interpolated image data from the overlapping observation.
+    jobs : int
+        The index of the overlapping observation.
+
+    Returns
+    -------
+    star_catalog_df : pd.DataFrame
+        Updated DataFrame containing the measured moments for stars in both observed and interp images.
+
+    """
+    if debug_outputs: 
+        hdu_list = [fits.PrimaryHDU()]
+        moments_vals = []
+
+    for index, row in star_catalog_df.iterrows():
+        x_star, y_star = wcs.world_to_pixel(SkyCoord(row['ra']*u.degree, row['dec']*u.degree))
+        x_star = round(x_star)
+        y_star = round(y_star)
+        if x_star < 50 or x_star > Stn.sca_nside - 50 or y_star < 50 or y_star > Stn.sca_nside - 50:
+            continue
+        cutout_iobs = image[y_star-25:y_star+25, x_star-25:x_star+25]
+        cutout_interp = interp[y_star-25:y_star+25, x_star-25:x_star+25]
+        
+        # measure the moments using galsim hsm
+        try:
+            hsm_iobs = galsim.hsm.FindAdaptiveMom(cutout_iobs, round_moments=True)
+            hsm_interp = galsim.hsm.FindAdaptiveMom(cutout_interp, round_moments=True)
+            star_catalog_df.loc[index, f'hsm_sigma_iobs_{iobs}'] = hsm_iobs.moments_sigma
+            star_catalog_df.loc[index, f'hsm_centroid_iobs_{iobs}'] = hsm_iobs.moments_centroid
+            hsm_iobs_centroid_sky = wcs.pixel_to_world(hsm_iobs.moments_centroid.x, hsm_iobs.moments_centroid.y)
+            star_catalog_df.loc[index, f'hsm_centroid_iobs_{iobs}_sky'] = hsm_iobs_centroid_sky
+            star_catalog_df.loc[index, f'hsm_sigma_interp_{jobs}'] = hsm_interp.moments_sigma
+            star_catalog_df.loc[index, f'hsm_centroid_interp_{jobs}'] = hsm_interp.moments_centroid
+            hsm_interp_centroid_sky = wcs.pixel_to_world(hsm_interp.moments_centroid.x, hsm_interp.moments_centroid.y)
+            star_catalog_df.loc[index, f'hsm_centroid_interp_{jobs}_sky'] = hsm_interp_centroid_sky
+        except Exception as e:
+            print(f"Error measuring moments for star at index {index}: {e}")
+
+        if debug_outputs and jobs<=2 and index<5:  
+            hdu_list.append(fits.ImageHDU(cutout_iobs, name=f'star_{index}_iobs_{iobs}'))
+            hdu_list.append(fits.ImageHDU(cutout_interp, name=f'star_{index}_interp_{jobs}'))
+            moments_vals.append([index, row['ra'], row['dec'],
+                                 hsm_iobs.moments_sigma, hsm_iobs.moments_centroid.x, hsm_iobs.moments_centroid.y,
+                                 hsm_iobs_centroid_sky.ra.deg, hsm_iobs_centroid_sky.dec.deg,
+                                 hsm_interp.moments_sigma, 
+                                 hsm_interp.moments_centroid.x, hsm_interp.moments_centroid.y,
+                                 hsm_interp_centroid_sky.ra.deg, hsm_interp_centroid_sky.dec.deg
+                                 ])
+            
+    if debug_outputs and jobs<=2:
+        # add table HDU of the moments vals
+        col1 = fits.Column(name='star_index', format='K', array=[val[0] for val in moments_vals])
+        col2 = fits.Column(name='ra', format='D', array=[val[1] for val in moments_vals])
+        col3 = fits.Column(name='dec', format='D', array=[val[2] for val in moments_vals])
+        col4 = fits.Column(name='hsm_sigma_iobs', format='E', array=[val[3] for val in moments_vals])
+        col5 = fits.Column(name='hsm_centroid_x_iobs', format='E', array=[val[4] for val in moments_vals])
+        col6 = fits.Column(name='hsm_centroid_y_iobs', format='E', array=[val[5] for val in moments_vals])
+        col7 = fits.Column(name='hsm_centroid_ra_iobs', format='D', array=[val[6] for val in moments_vals])
+        col8 = fits.Column(name='hsm_centroid_dec_iobs', format='D', array=[val[7] for val in moments_vals])
+        col9 = fits.Column(name='hsm_sigma_interp', format='E', array=[val[8] for val in moments_vals])
+        col10 = fits.Column(name='hsm_centroid_x_interp', format='E', array=[val[9] for val in moments_vals])
+        col11 = fits.Column(name='hsm_centroid_y_interp', format='E', array=[val[10] for val in moments_vals])
+        col12 = fits.Column(name='hsm_centroid_ra_interp', format='D', array=[val[11] for val in moments_vals])
+        col13 = fits.Column(name='hsm_centroid_dec_interp', format='D', array=[val[12] for val in moments_vals])
+        cols = fits.ColDefs([col1, col2, col3, col4, col5, col6, col7, col8, col9, col10, col11, col12, col13])
+        hdu_list.append(fits.BinTableHDU.from_columns(cols, name='star_moments'))
+        fits.HDUList(hdu_list).writeto(f'star_moments_debug_iobs_{iobs}_jobs_{jobs}.fits', overwrite=True)
+        
+
+    return star_catalog_df
+    
 
 
 def update_files(info, verbose=False):
@@ -210,7 +333,7 @@ class OutlierMap:
         file_prefix = cfg["INDATA"][0]
         file_format = cfg["INDATA"][1]
         filter = Stn.RomanFilters[cfg["FILTER"]]
-        star_catalog = cfg["STAR_CATALOG"]  # KL 
+        star_catalog = cfg.get("STAR_CATALOG", None)  # KL
 
         # add tails as needed
         file_prefix += stem_l2(file_format, filter)
@@ -303,25 +426,8 @@ class OutlierMap:
         ns = 1
 
         # KL
-        # filter star catalog to include only stars within this SCA's ra, dec limits
         if self.star_catalog is not None:
-            with pq.ParquetFile(self.star_catalog) as pf:
-                star_catalog_df = pf.read().to_pandas()
-            ny, nx = Stn.sca_nside, Stn.sca_nside
-            corners = np.array([[0,  0 ], [nx, 0 ], [0,  ny], [nx, ny]])
-            sky = self.wcs[iobs].pixel_to_world(corners[:, 0], corners[:, 1])
-
-            ra  = sky.ra.deg
-            dec = sky.dec.deg
-
-            ra_min,  ra_max  = ra.min(),  ra.max()
-            dec_min, dec_max = dec.min(), dec.max()
-
-            star_catalog_df = star_catalog_df[
-                (star_catalog_df['ra'] >= ra_min) & (star_catalog_df['ra'] <= ra_max) &
-                (star_catalog_df['dec'] >= dec_min) & (star_catalog_df['dec'] <= dec_max)
-            ]
-
+            star_catalog_df = _get_stars_in_image(self.star_catalog, self.wcs[iobs])
 
         # now build the set of other observations
         for jobs in jlist:
@@ -358,27 +464,15 @@ class OutlierMap:
                     np.logical_and(ct == k + 1, interp_good), interp_data, stack[k, :, :]
                 )
 
-        # KL
-        if self.star_catalog is not None:
-            for index, row in star_catalog_df.iterrows():
-                x_star, y_star = self.wcs[iobs].world_to_pixel(SkyCoord(row['ra']*u.degree, row['dec']*u.degree))
-                x_star = int(x_star)
-                y_star = int(y_star)
-                if x_star < 50 or x_star > Stn.sca_nside - 50 or y_star < 50 or y_star > Stn.sca_nside - 50:
-                    continue
-                cutout_iobs = self.image[iobs, y_star-25:y_star+25, x_star-25:x_star+25]
-                cutout_interp = interp_data[y_star-25:y_star+25, x_star-25:x_star+25]
-                
-                # measure the moments using galsim hsm
-                try:
-                    hsm_iobs = galsim.hsm.FindAdaptiveMom(cutout_iobs)
-                    hsm_interp = galsim.hsm.FindAdaptiveMom(cutout_interp)
-                    star_catalog_df.loc[index, f'hsm_sigma_iobs_{iobs}'] = hsm_iobs.moments_sigma
-                    star_catalog_df.loc[index, f'hsm_centroid_iobs_{iobs}'] = hsm_iobs.moments_centroid
-                    star_catalog_df.loc[index, f'hsm_sigma_interp_{jobs}'] = hsm_interp.moments_sigma
-                    star_catalog_df.loc[index, f'hsm_centroid_interp_{jobs}'] = hsm_interp.moments_centroid
-                except Exception as e:
-                    print(f"Error measuring moments for star at index {index}: {e}")
+            # KL
+            if self.star_catalog is not None:
+                star_catalog_df = _compare_star_moments(star_catalog_df,
+                                                         iobs, 
+                                                         self.image[iobs,:,:],
+                                                         self.wcs[iobs], 
+                                                         interp_data, 
+                                                        jobs
+                                                        )
 
 
         del interp_data
