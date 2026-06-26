@@ -132,6 +132,7 @@ class FullFoVImage:
 
                     start_time = a["roman"]["meta"]["exposure"]["start_time"]
                     mjd = a["roman"]["meta"]["ephemeris"]["time"]
+                    filter = a["roman"]["meta"]["instrument"]["optical_element"]
 
                     # effective gain information
                     medgain = a["processinfo"]["medgain"]
@@ -171,6 +172,8 @@ class FullFoVImage:
             new_hdu.header["ISVALID"] = (valid, "Was this SCA found?")
             new_hdu.header["HASMASK"] = (mask, "Was a mask applied?")
             new_hdu.header["HASWCS"] = bool(self.wcs is not None)
+            new_hdu.header["MJD"] = (mjd, "MJD of exposure start")
+            new_hdu.header["FILTER"] = (filter, "Filter name")
 
             # for now, not using the pixel-level error map
             new_hdu.header["ERRMAP"] = ("NULL", "Error map name")
@@ -190,6 +193,7 @@ class FullFoVImage:
         # save collected metadata
         phdu.header["MJD"] = mjd
         phdu.header["TSTART"] = str(start_time)
+        phdu.header["FILTER"] = filter
 
         self.hdulist = fits.HDUList(hdulist)  # save this as an HDUList
 

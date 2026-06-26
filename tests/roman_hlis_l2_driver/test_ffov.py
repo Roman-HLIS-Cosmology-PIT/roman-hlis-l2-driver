@@ -290,6 +290,7 @@ def test_ffov(tmp_path):
                         "exposure": {"start_time": "2028-12-01T04:00:00"},
                         "ephemeris": {"time": 62106.1666666667},
                         "wcs": sca_gwcs,
+                        "instrument": {"optical_element": "F184"},
                     },
                 },
                 "processinfo": {
@@ -356,6 +357,8 @@ def test_ffov(tmp_path):
             assert h["NAXIS"] == 2
             assert h["NAXIS1"] == 4088
             assert h["NAXIS2"] == 4088
+            assert h["MJD"] == 62106.1666666667
+            assert h["FILTER"] == "F184"
             assert h["EXTNAME"] == f"WFI{sca:02d}"
             if h["ISVALID"]:
                 assert 0.45 < h["EQVGAIN"] < 0.46
