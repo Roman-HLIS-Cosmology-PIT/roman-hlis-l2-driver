@@ -4,6 +4,7 @@ astropy
 gwcs
 galsim
 fitsio
-asdf
+asdf>=5.2.0
+asdf_astropy>=0.11.0
 roman_datamodels
 pyimcom
