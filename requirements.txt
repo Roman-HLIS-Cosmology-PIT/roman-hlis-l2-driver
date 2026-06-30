@@ -1,9 +1,10 @@
 numpy
 scipy
 astropy
-gwcs
+gwcs>=1.0.3
 galsim
 fitsio
-asdf
+asdf>=5.2.0
+asdf-astropy>=0.11.0
 roman_datamodels
 pyimcom
