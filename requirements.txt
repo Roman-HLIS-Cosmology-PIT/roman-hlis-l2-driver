@@ -1,7 +1,7 @@
 numpy
 scipy
 astropy
-gwcs
+gwcs>=1.0.3
 galsim
 fitsio
 asdf>=5.2.0
