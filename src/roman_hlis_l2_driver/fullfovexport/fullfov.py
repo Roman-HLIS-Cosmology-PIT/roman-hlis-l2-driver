@@ -20,6 +20,30 @@ from roman_datamodels.dqflags import pixel
 
 from .. import pars
 
+PER_SCA_CDS_NOISE = np.array(
+    [
+        17.49,
+        14.20,
+        14.70,
+        15.76,
+        13.64,
+        13.65,
+        13.21,
+        12.49,
+        12.39,
+        15.75,
+        13.94,
+        13.73,
+        16.17,
+        13.46,
+        13.46,
+        13.49,
+        12.64,
+        12.42,
+    ],
+    dtype=np.float32,
+)  # CDS noise in electrons from roman-technical-information
+
 
 def get_t_eff(K, tau, tbar):
     """
@@ -147,7 +171,16 @@ class FullFoVImage:
 
                     # get gain information
                     eqvgain = dslope * t_eff * medgain
-                    bkgndvar1 = np.median(a["roman"]["var_rnoise"]) / dslope**2
+                    # old calculation
+                    # bkgndvar1 = np.median(a["roman"]["var_rnoise"]) / dslope**2
+                    # new version without referring to the read noise frame, in (DN/s)^2
+                    n_frame_in_group = np.array([len(_x) for _x in pmeta["read_pattern"]])
+                    bkgndvar1 = (
+                        (PER_SCA_CDS_NOISE[sca - 1] / medgain) ** 2
+                        / 2.0
+                        * np.sum(pmeta["K"] ** 2 / n_frame_in_group)
+                        / dslope**2
+                    )
                     bkgndvar2 = a["processinfo"]["medsky"] / (t_eff * medgain * dslope**2)
 
             except FileNotFoundError:
