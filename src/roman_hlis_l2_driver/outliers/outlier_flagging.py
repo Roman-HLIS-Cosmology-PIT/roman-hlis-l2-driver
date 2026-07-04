@@ -186,6 +186,17 @@ class OutlierMap:
         The input mask as a cube (number, y, x), not expanded.
     max_workers : int
         Number of workers for thread parallelization.
+    mask_kwargs : dict, optional
+        If provided, pass additional keyword-arguments to the mask routine. Legal options are:
+
+        - ``cut_c``, ``cut_m``, ``cut_g`` : The value from median at which to cut as an outlier.
+        - ``dyn4``, ``dyn8`` : "Save" pixels whose outlier rate is less than this times the brightest
+          pixel in the median blot in a 4- or 8-pixel radius.
+        - ``star_flux`` : "Saves" pixels around stars that are this bright (so we don't mask the inner
+          diffraction spikes).
+        - ``star_rad`` : Radius around the star (in native pixels) for the cut above.
+        - ``mdscale`` : Cut if the image multiplied by this factor is above the median image by more than
+          the noise.
 
     Methods
     -------
@@ -202,7 +213,7 @@ class OutlierMap:
 
     """
 
-    def __init__(self, cfg_file, max_files=None, max_workers=8, run_and_save=None):
+    def __init__(self, cfg_file, max_files=None, max_workers=8, run_and_save=None, mask_kwargs=None):
         # config file
         self.cfg = pyimcom.config.Config(cfg_file)
 
@@ -265,7 +276,8 @@ class OutlierMap:
         self.max_workers = max_workers  # save the maximum number of workers to use
 
         if run_and_save is not None:
-            self.build_masks()
+            mask_kwargs = {} if mask_kwargs is None else mask_kwargs
+            self.build_masks(**mask_kwargs)
             self.save_data(run_and_save, update=True, verbose=True)
 
     def overlap(self, iobs):
