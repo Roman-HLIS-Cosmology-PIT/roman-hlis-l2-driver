@@ -148,7 +148,7 @@ def test_integrated(tmp_path):
     print("IQR OLD =", iqr_old)
 
     # run the destriping
-    destripe.destripe_all_layers(tmp_path + "/cfg.txt", verbose=True)
+    destripe.destripe_all_layers(tmp_path + "/cfg.txt", verbose=True, tracktest=True)
 
     # check overlap matrix
     mtarget = np.array([[1.0, 0.0, 0.05942073], [0.0, 1.0, 0.33928332], [0.05942073, 0.33928332, 1.0]])
