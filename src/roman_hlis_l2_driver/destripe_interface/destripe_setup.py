@@ -49,7 +49,9 @@ def _setup_one_file(args):
             fits.HDUList([phdu, mf[1]]).writeto(outfile, overwrite=True)
 
 
-def setup_all_files(fprefix, outprefix, max_files=None, wcs_order=4, noiseid=None, verbose=False, tracktest=False):
+def setup_all_files(
+    fprefix, outprefix, max_files=None, wcs_order=4, noiseid=None, verbose=False, tracktest=False
+):
     """
     Gets all the files starting with the specified format.
 
@@ -99,7 +101,7 @@ def setup_all_files(fprefix, outprefix, max_files=None, wcs_order=4, noiseid=Non
     max_workers = int(os.environ.get("SLURM_CPUS_PER_TASK", 1))
     if tracktest:
         # this is so that pytest knows _setup_one_file is being run
-        _setup_one_file(fp[0], outprefix, Stn.sca_nside, noiseid, wcs_order, verbose)
+        _setup_one_file(use_files[0], outprefix, Stn.sca_nside, noiseid, wcs_order, verbose)
     # now the main run
     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as e:
         e.map(_setup_one_file, use_files2)
