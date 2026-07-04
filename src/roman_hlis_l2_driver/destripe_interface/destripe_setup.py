@@ -49,7 +49,7 @@ def _setup_one_file(args):
             fits.HDUList([phdu, mf[1]]).writeto(outfile, overwrite=True)
 
 
-def setup_all_files(fprefix, outprefix, max_files=None, wcs_order=4, noiseid=None, verbose=False):
+def setup_all_files(fprefix, outprefix, max_files=None, wcs_order=4, noiseid=None, verbose=False, tracktest=False):
     """
     Gets all the files starting with the specified format.
 
@@ -72,6 +72,9 @@ def setup_all_files(fprefix, outprefix, max_files=None, wcs_order=4, noiseid=Non
         fprefix + (numbers and underscores) + "_noise.asdf" file.
     verbose : bool, optional
         If True, print lots of data to the output.
+    tracktest : bool, optional
+        If True, does one setup outside the parallelization for coverage tracking.
+        You probably won't use this in general.
 
     Returns
     -------
@@ -94,6 +97,10 @@ def setup_all_files(fprefix, outprefix, max_files=None, wcs_order=4, noiseid=Non
 
     use_files2 = [(fp, outprefix, Stn.sca_nside, noiseid, wcs_order, verbose) for fp in use_files]
     max_workers = int(os.environ.get("SLURM_CPUS_PER_TASK", 1))
+    if tracktest:
+        # this is so that pytest knows _setup_one_file is being run
+        _setup_one_file(fp[0], outprefix, Stn.sca_nside, noiseid, wcs_order, verbose)
+    # now the main run
     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as e:
         e.map(_setup_one_file, use_files2)
 
