@@ -101,7 +101,7 @@ def setup_all_files(
     max_workers = int(os.environ.get("SLURM_CPUS_PER_TASK", 1))
     if tracktest:
         # this is so that pytest knows _setup_one_file is being run
-        _setup_one_file(use_files[0], outprefix, Stn.sca_nside, noiseid, wcs_order, verbose)
+        _setup_one_file((use_files[0], outprefix, Stn.sca_nside, noiseid, wcs_order, verbose))
     # now the main run
     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as e:
         e.map(_setup_one_file, use_files2)
