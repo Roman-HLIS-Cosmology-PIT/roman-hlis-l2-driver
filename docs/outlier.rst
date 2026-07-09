@@ -8,14 +8,24 @@ Overview
 
 The outlier rejection step is carried out for each mosaic. Typically, there are ≈320 exposure images per square degree, so a 1.25 deg^2 mosaic has ≈400 exposure images. The current way the code is implemented, the science layer and boolean mask for the whole mosaic is read into memory (≈30 GB), and multithreading is used to mask multiple exposures in parallel. This minimizes disk access, and the memory footprint is well within the capabilities of modern HPC systems.
 
-The main interface is the ``OutlierMap`` class, which can be built from a PyIMCOM configuration. The simplest option is::
+The main interface is the ``OutlierMap`` class, which can be built from a PyIMCOM configuration. The simplest option is:
 
-    OutlierMap("myconfig.json", max_workers=24,
-        run_and_save="mask_cube.asdf")
+.. code-block:: python
 
-which will build the combined map from the PyIMCOM configuration fuile ``myconfig.json``, using a maximum of 24 workers, and save the output mask to ``mask_cube.asdf``. Note that since the Level 2 files are updated in place (with the new ``tree["mask"]`` object and ``tree["processinfo"]["outlier_complete"]`` flag), you don't actually need to keep the cube.
+    OutlierMap("myconfig.json", max_workers=24, run_and_save="mask_cube.asdf")
 
-Lower-level control over the individual sub-steps is possible; the following would have the same effect::
+which will build the combined map from the PyIMCOM configuration fuile ``myconfig.json``, using a maximum of 24 workers, and save the output mask to ``mask_cube.asdf``. Note that since the Level 2 files are updated in place (with the new ``tree["mask"]`` object and ``tree["processinfo"]["outlier_complete"]`` flag), you don't actually need to keep the cube. You can specify parameters via:
+
+.. code-block:: python
+
+    OutlierMap("myconfig.json", max_workers=24, run_and_save="mask_cube.asdf",
+        mask_kwargs={"cut_c": 1.0, "star_rad": 25})
+
+(See `Outlier masks`_ for the full list of options.)
+
+Lower-level control over the individual sub-steps is possible; the following would have the same effect:
+
+.. code-block:: python
 
     # build the map structure (including reading in data)
     omap = OutlierMap("myconfig.json")
