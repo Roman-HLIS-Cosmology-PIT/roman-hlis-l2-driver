@@ -190,7 +190,12 @@ def test_integrated(tmp_path):
 
     # now run outliers!
     # this test won't actually flag anything because of insufficient overlap, but it exercises the mechanics
-    outlier_flagging.OutlierMap(tmp_path + "/cfg.txt", max_workers=2, run_and_save=tmp_path + "/mask_F1.asdf")
+    outlier_flagging.OutlierMap(
+        tmp_path + "/cfg.txt",
+        max_workers=2,
+        run_and_save=tmp_path + "/mask_F1.asdf",
+        mask_kwargs={"cut_c": 0.3},
+    )
     with asdf.open(tmp_path + "/mask_F1.asdf") as a:
         assert a["N"] == 3
         assert len(a["files"]) == 3
