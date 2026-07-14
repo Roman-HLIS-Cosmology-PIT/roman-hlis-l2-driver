@@ -17,7 +17,7 @@ from ..name_util import stem_l2
 from .destripe_setup import setup_all_files
 
 
-def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
+def destripe_one_layer(cfg_file, noiseid=None, verbose=False, tracktest=False):
     """
     Destripes one layer from the indicated set of files.
 
@@ -34,6 +34,9 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
         Otherwise, does the science layer.
     verbose : bool, optional
         Whether to talk a lot to the output.
+    tracktest : bool, optional
+        If True, does one setup outside the parallelization for coverage tracking.
+        You probably won't use this in general.
 
     Returns
     -------
@@ -60,7 +63,9 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
     if verbose:
         print("File prefix =", file_prefix)
 
-    use_files = setup_all_files(file_prefix, out_prefix, wcs_order=3, noiseid=noiseid, verbose=verbose)
+    use_files = setup_all_files(
+        file_prefix, out_prefix, wcs_order=3, noiseid=noiseid, verbose=verbose, tracktest=tracktest
+    )
     if verbose:
         print("Files selected:", use_files)
 
@@ -164,7 +169,7 @@ def destripe_one_layer(cfg_file, noiseid=None, verbose=False):
     return n_noise_layer
 
 
-def destripe_all_layers(cfg_file, verbose=False):
+def destripe_all_layers(cfg_file, verbose=False, tracktest=False):
     """
     Destripe all layer from the indicated set of files (including noise).
 
@@ -177,6 +182,9 @@ def destripe_all_layers(cfg_file, verbose=False):
         The configuration file.
     verbose : bool, optional
         Whether to talk a lot to the output.
+    tracktest : bool, optional
+        If True, does one setup outside the parallelization for coverage tracking.
+        You probably won't use this in general.
 
     Returns
     -------
@@ -185,7 +193,7 @@ def destripe_all_layers(cfg_file, verbose=False):
 
     """
 
-    n_noise_layer = destripe_one_layer(cfg_file, verbose=verbose)
+    n_noise_layer = destripe_one_layer(cfg_file, verbose=verbose, tracktest=tracktest)
     for i_noise in range(n_noise_layer):
         destripe_one_layer(cfg_file, noiseid=i_noise, verbose=verbose)
 
