@@ -9,7 +9,7 @@ def previous_obsid(obsid: int, row_number: int, inputfile: str):
         returns the ID of the observation that came before it.
     Parameters
     ---------
-    OBSID: int
+    obsid: int
         Observation ID
     row_number: int
         Row number of
@@ -22,13 +22,15 @@ def previous_obsid(obsid: int, row_number: int, inputfile: str):
 	"""
 	in_file = f.open(inputfile)
 	
-	dates = in_file[1].data["date"]
-	sorted_dates = np.argsort(dates)
+	all_obsid = in_file[1].data["date"]
+	sorted_obsid_indices = np.argsort(all_obsid)
 	
-	current_obsid = np.where(sorted_dates == obsid)
-	current_obsid_index = current_obsid[0][0]
-	
-	if current_obsid_index == 0:
-		return None
+	previous_obsid = None
 
-	return dates[float(current_obsid_index) - 1]
+	for current_index in sorted_obsid_indices:
+		current_obsid = all_obsid[current_index]
+		if current_obsid >= obsid:
+			break
+		previous_obsid = float(current_obsid)
+
+	return previous_obsid
