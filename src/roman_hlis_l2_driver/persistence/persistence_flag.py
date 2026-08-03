@@ -35,7 +35,7 @@ def previous_obsid(inputfile: str, row_number = None, obsid = None):
 		if prev_index == 0:
 			return None
 			
-		return previous
+		return prev_index
 
 	if row_number is None and obsid is not None: 
 		sorted_obsid_indices = np.argsort(all_obsid)
