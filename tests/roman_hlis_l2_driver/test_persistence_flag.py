@@ -93,14 +93,14 @@ def test_previous_obsid_returns_none_when_no_previous_exists(
 
 def test_previous_row_number(observation_table):
     """
-    FITS row 1 contains DATE=62000.03000.
+    In sorted order, row_number = 2 corresponds to DATE=62000.03000.
 
     The previous chronological observation is DATE=62000.02000,
     which is located in FITS row 3.
     """
     result = previous_obsid(
         str(observation_table),
-        row_number=1,
+        row_number=2,
     )
 
     assert result == 3
