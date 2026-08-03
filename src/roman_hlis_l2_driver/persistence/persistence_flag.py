@@ -30,7 +30,7 @@ def previous_obsid(inputfile: str, row_number = None, obsid = None):
 	
 	if row_number is not None and obsid is None:
 		prev_row = np.where(np.argsort(all_obs) == row_number -1 )
-		prev_index = prev_row[0][0]
+		prev_index = int(prev_row[0][0])
 		
 		if prev_index == 0:
 			return None
