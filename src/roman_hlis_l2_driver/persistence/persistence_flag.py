@@ -22,7 +22,7 @@ def previous_obsid(inputfile: str, row_number = None, obsid = None):
         Observation ID of the previous observation to the one passed in.
     prev_row: int
         Row number of the observation previous to the row_number passed,
-		sorted chronologically.
+		were the rows sorted by date.
 	"""
 	in_file = f.open(inputfile)
 	all_obs = in_file[1].data["date"]
