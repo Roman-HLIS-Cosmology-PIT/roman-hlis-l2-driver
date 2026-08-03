@@ -31,12 +31,12 @@ def previous_obsid(inputfile: str, row_number = None, obsid = None):
 		print("Please pick EITHER an obsid or a row_number to search by, not both")
 	
 	if row_number is not None and obsid is None:
-		selected_row = int(np.where(np.argsort(all_obs) == row_number)[0][0])
-		prev_row = int(np.argsort(all_obs)[selected_row - 1])
-		
-		if prev_row == 0:
+		sorted_index = int(np.where(np.argsort(all_obs) == row_number)[0][0])
+
+		if sorted_index == 0:
 			return None
 			
+		prev_row = int(np.argsort(all_obs)[sorted_index - 1])
 		return prev_row
 
 	if row_number is None and obsid is not None: 
