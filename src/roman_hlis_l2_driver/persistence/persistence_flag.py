@@ -4,17 +4,17 @@
 import numpy as np
 from astropy.io import fits as f
 
-def previous_obsid(obsid = None, row_number: int, inputfile: str):
+def previous_obsid(inputfile: str, row_number = None, obsid = None):
 	""" Given an observation ID and a path to a FITS file,
         returns the ID of the observation that came before it in the file.
     Parameters
     ---------
-    obsid: int
-        Observation ID, taken as the modified Julian date.
-    row_number: int
-        Row number, or index, of an observation within the fits file.
     inputfile: str or str-like
         Path to observation table fits file.
+    row_number: int
+        Row number, or index, of an observation within the fits file.
+    obsid: int
+        Observation ID, taken as the modified Julian date.
     Returns
     -------
     obsid_prev: int
