@@ -5,8 +5,9 @@ import numpy as np
 from astropy.io import fits as f
 
 def previous_obsid(inputfile: str, row_number = None, obsid = None):
-	""" Given an observation ID and a path to a FITS file,
-        returns the ID of the observation that came before it in the file.
+	""" Given an observation ID (or a row number) and a path to a FITS file,
+        returns the ID (or row number) of the observation that came before it
+		in the file.
     Parameters
     ---------
     inputfile: str or str-like
