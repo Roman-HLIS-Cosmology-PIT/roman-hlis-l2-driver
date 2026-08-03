@@ -38,12 +38,12 @@ def previous_obsid(inputfile: str, row_number = None, obsid = None):
 		return prev_index
 
 	if row_number is None and obsid is not None: 
-		sorted_obsid_indices = np.argsort(all_obsid)
+		sorted_obsid_indices = np.argsort(all_obs)
 		
 		previous_obsid = None
 	
 		for current_index in sorted_obsid_indices:
-			current_obsid = all_obsid[current_index]
+			current_obsid = all_obs[current_index]
 			if current_obsid >= obsid:
 				break
 			previous_obsid = float(current_obsid)
