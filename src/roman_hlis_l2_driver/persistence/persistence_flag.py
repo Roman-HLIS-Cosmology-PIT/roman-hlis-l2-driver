@@ -13,15 +13,16 @@ def previous_obsid(inputfile: str, row_number = None, obsid = None):
     inputfile: str or str-like
         Path to observation table fits file.
     row_number: int
-        Row number, or index, of an observation within the fits file.
+        Unsorted row number, or index, of an observation within the fits file.
     obsid: int
         Observation ID, taken as the modified Julian date.
     Returns
     -------
     obsid_prev: int
         Observation ID of the previous observation to the one passed in.
-    previous_index: int
-        Row number of the observation previous to the row_number passed.
+    prev_row: int
+        Row number of the observation previous to the row_number passed,
+		sorted chronologically.
 	"""
 	in_file = f.open(inputfile)
 	all_obs = in_file[1].data["date"]
@@ -30,13 +31,13 @@ def previous_obsid(inputfile: str, row_number = None, obsid = None):
 		print("Please pick EITHER an obsid or a row_number to search by, not both")
 	
 	if row_number is not None and obsid is None:
-		prev_row = np.where(np.argsort(all_obs) == row_number -1 )
-		prev_index = int(prev_row[0][0])
+		selected_row = int(np.where(np.argsort(all_obs) == row_number)[0][0])
+		prev_row = int(np.argsort(all_obs)[selected_row - 1])
 		
-		if prev_index == 0:
+		if prev_row == 0:
 			return None
 			
-		return prev_index
+		return prev_row
 
 	if row_number is None and obsid is not None: 
 		sorted_obsid_indices = np.argsort(all_obs)
