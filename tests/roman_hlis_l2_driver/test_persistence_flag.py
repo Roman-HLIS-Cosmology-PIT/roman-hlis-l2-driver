@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 from astropy.io import fits
-
 from roman_hlis_l2_driver.persistence.persistence_flag import previous_obsid
+
 
 @pytest.fixture
 def observation_table(tmp_path):
@@ -21,8 +21,7 @@ def observation_table(tmp_path):
     Chronological order:
         row 1 -> row 3 -> row 0 -> row 2
     """
-    dates = np.array([62000.03000, 62000.01000, 62000.04000, 62000.02000],
-        dtype=np.float64)
+    dates = np.array([62000.03000, 62000.01000, 62000.04000, 62000.02000], dtype=np.float64)
 
     date_column = fits.Column(
         name="date",
@@ -121,18 +120,13 @@ def test_first_chronological_row_has_no_previous_row(observation_table):
 
 def test_passing_both_search_arguments_prints_warning(
     observation_table,
-    capsys,
 ):
-    result = previous_obsid(
-        str(observation_table),
-        row_number=2,
-        obsid=62000.03000,
-    )
-
-    captured = capsys.readouterr()
-
-    assert result is None
-    assert "Please pick EITHER an obsid or a row_number" in captured.out
+    with pytest.raises(ValueError):
+        result = previous_obsid(
+            str(observation_table),
+            row_number=2,
+            obsid=62000.03000,
+        )
 
 
 def test_passing_no_search_argument_returns_none(observation_table):
