@@ -82,6 +82,9 @@ def test_previous_obsid_returns_none_when_no_previous_exists(
     observation_table,
     obsid,
 ):
+    """Checks that None is passed if the obsertable does
+    not contain an ID previous to the one passed.
+    """
     result = previous_obsid(
         str(observation_table),
         obsid=obsid,
@@ -121,8 +124,9 @@ def test_first_chronological_row_has_no_previous_row(observation_table):
 def test_passing_both_search_arguments_prints_warning(
     observation_table,
 ):
+    """Checks that ValueError is raised if we provide both arguments."""
     with pytest.raises(ValueError):
-        result = previous_obsid(
+        previous_obsid(
             str(observation_table),
             row_number=2,
             obsid=62000.03000,
@@ -130,6 +134,9 @@ def test_passing_both_search_arguments_prints_warning(
 
 
 def test_passing_no_search_argument_returns_none(observation_table):
+    """Checks to make sure None is passed when neither
+    row_number or obsid is passed
+    """
     result = previous_obsid(str(observation_table))
 
     assert result is None
