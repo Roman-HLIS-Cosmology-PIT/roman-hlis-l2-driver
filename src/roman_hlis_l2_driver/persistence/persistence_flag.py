@@ -76,7 +76,7 @@ def get_prev_obs(obstable: str, nbackup = 1, id = None):
         Returns
         -------
         prev_id: int
-            The observation row # of the previous observation
+            The observation row # of the previous observation.
         delta_t: float
             Time elapsed from previous obs to this one (in days).
     """
@@ -94,3 +94,22 @@ def get_prev_obs(obstable: str, nbackup = 1, id = None):
     prev_obs = all_obs[prev_id]
     delta_t = current_obs - prev_obs
     return prev_id, delta_t
+
+def get_obs_date(obstable: str, id = None):
+    """ Given an id, retrieve from obstable the date of the associated obs
+        Parameters
+        ----------
+        obstable: str
+            File path for a FITS table of observations.
+        id: int
+            The observation row # in the table.
+        Returns
+        -------
+        obs_date: float
+            Date of the requested obs, in modified Julian date.
+    """
+    in_file = f.open(obstable)
+    all_obs = in_file[1].data["date"]
+
+    obs_date = all_obs[id]
+    return obs_date
