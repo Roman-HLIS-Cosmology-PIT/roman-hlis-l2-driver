@@ -87,12 +87,14 @@ def get_prev_obs(obstable: str, nbackup=1, id=None):
     all_obs = in_file[1].data["date"]
 
     current_obs = all_obs[id]
-    delta_t = 0
+    delta_t = None
     for backup_step in range(nbackup):
         prev_id = previous_obsid(inputfile=obstable, row_number=(id - backup_step))
 
-    prev_obs = all_obs[prev_id]
-    delta_t = current_obs - prev_obs
+    if prev_id is not None:
+        prev_obs = all_obs[prev_id]
+        delta_t = current_obs - prev_obs
+        
     return prev_id, delta_t
 
 
