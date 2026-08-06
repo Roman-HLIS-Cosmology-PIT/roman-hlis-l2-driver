@@ -63,50 +63,51 @@ def previous_obsid(inputfile: str, row_number=None, obsid=None):
         return previous_obsid
 
 
-def get_prev_obs(obstable: str, nbackup = 1, id = None):
-    """ Find from obstable the id that is 'nbackup' previous
-        Parameters
-        ----------
-        obstable: str
-            File path for a FITS table of observations.
-        nbackup: int
-            Number of steps to take back (e.g., 1 is the previous observation).
-        id: int
-            The observation row # in the table.
-        Returns
-        -------
-        prev_id: int
-            The observation row # of the previous observation.
-        delta_t: float
-            Time elapsed from previous obs to this one (in days).
+def get_prev_obs(obstable: str, nbackup=1, id=None):
+    """Find from obstable the id that is 'nbackup' previous
+    Parameters
+    ----------
+    obstable: str
+        File path for a FITS table of observations.
+    nbackup: int
+        Number of steps to take back (e.g., 1 is the previous observation).
+    id: int
+        The observation row # in the table.
+    Returns
+    -------
+    prev_id: int
+        The observation row # of the previous observation.
+    delta_t: float
+        Time elapsed from previous obs to this one (in days).
     """
     if id is None:
         raise ValueError("Please enter an id")
-        
+
     in_file = f.open(obstable)
     all_obs = in_file[1].data["date"]
 
     current_obs = all_obs[id]
     delta_t = 0
     for backup_step in range(nbackup):
-        prev_id = previous_obsid(inputfile = obstable, row_number = (id - backup_step) )
+        prev_id = previous_obsid(inputfile=obstable, row_number=(id - backup_step))
 
     prev_obs = all_obs[prev_id]
     delta_t = current_obs - prev_obs
     return prev_id, delta_t
 
-def get_obs_date(obstable: str, id = None):
-    """ Given an id, retrieve from obstable the date of the associated obs
-        Parameters
-        ----------
-        obstable: str
-            File path for a FITS table of observations.
-        id: int
-            The observation row # in the table.
-        Returns
-        -------
-        obs_date: float
-            Date of the requested obs, in modified Julian date.
+
+def get_obs_date(obstable: str, id=None):
+    """Given an id, retrieve from obstable the date of the associated obs
+    Parameters
+    ----------
+    obstable: str
+        File path for a FITS table of observations.
+    id: int
+        The observation row # in the table.
+    Returns
+    -------
+    obs_date: float
+        Date of the requested obs, in modified Julian date.
     """
     in_file = f.open(obstable)
     all_obs = in_file[1].data["date"]
