@@ -83,7 +83,7 @@ def get_prev_obs(obstable: str, nbackup = 1, id = None):
     if id is None:
         raise ValueError("Please enter an id")
         
-    in_file = f.open(inputfile)
+    in_file = f.open(obstable)
     all_obs = in_file[1].data["date"]
 
     current_obs = all_obs[id]
