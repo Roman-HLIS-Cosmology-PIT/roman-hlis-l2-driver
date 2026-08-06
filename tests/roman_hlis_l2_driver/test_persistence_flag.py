@@ -82,8 +82,8 @@ def test_previous_obsid_returns_none_when_no_previous_exists(
     observation_table,
     obsid,
 ):
-    """Checks that None is passed if the obsertable does
-    not contain an ID previous to the one passed.
+    """Checks that None is passed if the observation_table does
+    not contain an obsid previous to the one passed.
     """
     result = previous_obsid(
         str(observation_table),
@@ -140,3 +140,24 @@ def test_passing_no_search_argument_returns_none(observation_table):
     result = previous_obsid(str(observation_table))
 
     assert result is None
+
+
+def test_get_prev_obs_returns_none_when_no_previous_exists(observation_table):
+    """Checks that Nones are passed if the observation_table does
+    not contain an id previous to the one passed.
+    """
+    result1, result2 = get_prev_obs(str(observation_table),row_number=1)
+
+    assert result1 is None and result2 is None
+
+
+def test_get_prev_obs_nbackup_not_supplied(observation_table):
+    """
+    As passed, row_number = 2 corresponds to DATE=62000.04000.
+
+    The previous chronological observation is DATE=62000.03000,
+    which is located in FITS row 0, and their difference is 0.01.
+    """
+    result1, result2 = get_prev_obs(str(observation_table), id=2)
+
+    assert result1 == 0 and result2 == 0.01
