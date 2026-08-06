@@ -93,3 +93,4 @@ def get_prev_obs(obstable: str, nbackup = 1, id = None):
 
     prev_obs = all_obs[prev_id]
     delta_t = current_obs - prev_obs
+    return prev_id, delta_t
