@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 from astropy.io import fits
-from roman_hlis_l2_driver.persistence.persistence_flag import previous_obsid
+from roman_hlis_l2_driver.persistence.persistence_flag import previous_obsid, get_prev_obs
 
 
 @pytest.fixture
