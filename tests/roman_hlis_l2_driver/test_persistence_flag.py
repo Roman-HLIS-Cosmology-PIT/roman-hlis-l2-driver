@@ -146,7 +146,7 @@ def test_get_prev_obs_returns_none_when_no_previous_exists(observation_table):
     """Checks that Nones are passed if the observation_table does
     not contain an id previous to the one passed.
     """
-    result1, result2 = get_prev_obs(str(observation_table),row_number=1)
+    result1, result2 = get_prev_obs(str(observation_table),id=1)
 
     assert result1 is None and result2 is None
 
@@ -160,7 +160,7 @@ def test_get_prev_obs_nbackup_not_supplied(observation_table):
     """
     result1, result2 = get_prev_obs(str(observation_table), id=2)
 
-    assert result1 == 0 and result2 == 0.01
+    assert result1 == 0 and result2 == (62000.04000-62000.03000)
 
 
 def test_get_prev_obs_with_nbackup_passed(observation_table):
@@ -172,4 +172,4 @@ def test_get_prev_obs_with_nbackup_passed(observation_table):
     """
     result1, result2 = get_prev_obs(str(observation_table), id=0, nbackup=2)
 
-    assert result1 == 1 and result2 == 0.02
+    assert result1 == 1 and result2 == (62000.03000-62000.01000)
