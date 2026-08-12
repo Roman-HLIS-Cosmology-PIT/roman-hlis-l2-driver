@@ -160,7 +160,7 @@ def test_get_prev_obs_nbackup_not_supplied(observation_table):
     """
     result1, result2 = get_prev_obs(str(observation_table), id=2)
 
-    assert result1 == 0 and result2 == np.abs(result2 - 0.01) < 1.0e-5
+    assert result1 == 0 and np.abs(result2 - 0.01) < 1.0e-5
 
 
 def test_get_prev_obs_with_nbackup_passed(observation_table):
@@ -172,4 +172,4 @@ def test_get_prev_obs_with_nbackup_passed(observation_table):
     """
     result1, result2 = get_prev_obs(str(observation_table), id=0, nbackup=2)
 
-    assert result1 == 1 and result2 == np.abs(result2 - 0.02) < 1.0e-5
+    assert result1 == 1 and np.abs(result2 - 0.02) < 1.0e-5
