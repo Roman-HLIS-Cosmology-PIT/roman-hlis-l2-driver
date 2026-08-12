@@ -161,3 +161,15 @@ def test_get_prev_obs_nbackup_not_supplied(observation_table):
     result1, result2 = get_prev_obs(str(observation_table), id=2)
 
     assert result1 == 0 and result2 == 0.01
+
+
+def test_get_prev_obs_with_nbackup_passed(observation_table):
+    """
+    As passed, row_number = 0 corresponds to DATE=62000.03000.
+
+    The observation that is (n=2) before is DATE=62000.01000,
+    which is located in FITS row 1, and their difference is 0.02.
+    """
+    result1, result2 = get_prev_obs(str(observation_table), id=0, nbackup=2)
+
+    assert result1 == 1 and result2 == 0.02
