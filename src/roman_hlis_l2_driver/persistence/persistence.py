@@ -68,6 +68,7 @@ def run(cfg: str, l2dir: str, delta_t_prime_max = 1200.0, signal_threshold = 200
     
     while delta_t_prime <= delta_t_prime_max:
       prev_id, delta_t = pf.get_prev_obs(obs_file_path,id=int(obsid))
+      obsid = prev_id
       # delta_t returned in days, convert to seconds
       delta_t *= 86400 # (24*60*60) to go from days to secs
       exptime = exptime_list[prev_id]
@@ -100,7 +101,7 @@ def run(cfg: str, l2dir: str, delta_t_prime_max = 1200.0, signal_threshold = 200
           continue
 
         
-        print("breaking while loop by setting delta_t_prime to 1201")
-        delta_t_prime = 1201
+          print("breaking while loop by setting delta_t_prime to 1201")
+          delta_t_prime = 1201
         
   return persistence_mask
