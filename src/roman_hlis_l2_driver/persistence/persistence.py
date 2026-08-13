@@ -177,12 +177,12 @@ def run(cfg: str,l2dir=None,delta_t_prime_max=1200.0,signal_threshold=20000.0):
             persistence_mask = np.zeros((4088, 4088),dtype=bool)
 
         print(f"Previous observations searched: {prev_ids}")
-        print("Total pixels in cumulative persistence mask: {np.count_nonzero(persistence_mask)}")
+        print(f"Total pixels in cumulative persistence mask: {np.count_nonzero(persistence_mask)}")
 
         # Actually put our result into mask_list
         mask_list.append((persistence_mask, prev_ids))
 
-        print("DEBUG MODE: stopping after first valid L2.1 file.")
+        print("debug, stopping after first valid L2.1 file.")
         return mask_list
 
     return mask_list
