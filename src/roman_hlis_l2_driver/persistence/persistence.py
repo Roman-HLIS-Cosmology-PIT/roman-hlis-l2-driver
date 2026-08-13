@@ -50,6 +50,9 @@ def run(cfg: str, l2dir: str, delta_t_prime_max = 1200.0, signal_threshold = 200
     
     search_format = '_(\d+)_(\d+)\.asdf$'
     matches = re.search(search_format,file.name)
+
+    if matches is None:
+      break
     obsid = matches[1]
     sca = matches[2]
 
