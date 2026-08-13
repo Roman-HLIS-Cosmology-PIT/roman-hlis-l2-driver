@@ -76,7 +76,12 @@ def run(cfg: str, l2dir: str, delta_t_prime_max = 1200.0, signal_threshold = 200
       l2_directory = Path(cfg_file["INDATA"][0][:-3]+"/")
       
       for l2_file in l2_directory.iterdir():
-        print(f"looking at file: {l2_file.name} in the L2 directory")
+        search_format = '_(\d+)_(\d+)\.asdf$'
+        matches = re.search(search_format,file.name)
+        if matches is None:
+          continue
+        print(f"now looking in the L2 directory @ {l2_directory}")
+        print(f"looking at file: {l2_file.name}")
         current_file = a.open(l2_file)
         data_array = current_file['roman']['data']
         ny,nx = data_array.shape
