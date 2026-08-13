@@ -9,9 +9,6 @@ from astropy.io import fits as f
 from pyimcom.config import Config
 
 
-myfile = "/users/PCON0003/cond0007/Jul26/config-Jul26-H1.json"
-cfg = Config(myfile)
-
 def run(cfg, delta_t_prime_max = 1200.0, signal_threshold = 20000.0, l2dir: str):
   """
     Parameters
@@ -52,8 +49,8 @@ def run(cfg, delta_t_prime_max = 1200.0, signal_threshold = 20000.0, l2dir: str)
     prev_ids = []
     while delta_t_prime <= delta_t_prime_max:
       prev_id, delta_t = pf.get_prev_obs(obs_list,id=obsid)
-      # delta_t returned in years, convert to seconds
-      delta_t *= 86400 # (24*60*60) to go from years to secs
+      # delta_t returned in days, convert to seconds
+      delta_t *= 86400 # (24*60*60) to go from days to secs
       delta_t_prime = delta_t + exptime[prev_id]
       prev_ids.append(prev_id)
 
