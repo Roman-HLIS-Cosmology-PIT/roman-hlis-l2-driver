@@ -2,13 +2,15 @@
 
 import re
 import json
+import warnings
+
+import asdf as a
 import numpy as np
+from pathlib import Path
+from astropy.io import fits as f
+from erfa import ErfaWarning
 
 import persistence_flag as pf
-import asdf as a
-from astropy.io import fits as f
-
-from pathlib import Path
 
 
 def run(cfg: str,l2dir=None,delta_t_prime_max=1200.0,signal_threshold=20000.0):
@@ -148,9 +150,12 @@ def run(cfg: str,l2dir=None,delta_t_prime_max=1200.0,signal_threshold=20000.0):
             print(f"Found matching L2 file: {l2_file}")
 
             # Read previous observation
-            with a.open(l2_file) as current_file:
-
-                data_array = np.asarray(current_file["roman"]["data"])
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore",
+                    message=r'ERFA function "dtf2d".*dubious year.*',
+                    category=ErfaWarning)
+                with a.open(l2_file) as current_file:
+                    data_array = np.asarray(current_file["roman"]["data"])
 
             # L2 data are DN / second
             signal_dn = data_array * exptime
