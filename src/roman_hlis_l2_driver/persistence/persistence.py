@@ -68,8 +68,8 @@ def run(cfg: str, l2dir: str, delta_t_prime_max = 1200.0, signal_threshold = 200
       prev_id, delta_t = pf.get_prev_obs(obs_file_path,id=int(obsid))
       # delta_t returned in days, convert to seconds
       delta_t *= 86400 # (24*60*60) to go from days to secs
-      delta_t_prime = delta_t + exptime[prev_id]
-      print(delta_t_prime)
+      delta_t_prime = delta_t + exptime_list[prev_id]
+      print(f"delta_t: {delta_t}, delta_t_prime: {delta_t_prime}, exptime: {exptime_list[prev_id]}")
       l2_directory = Path(cfg_file["INDATA"][0][:-3]+"/")
       for l2_file in l2_directory.iterdir():
         print(f"looking at file: {l2_file.name} in the L2 directory")
