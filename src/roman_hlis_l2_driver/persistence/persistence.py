@@ -46,7 +46,7 @@ def run(cfg: str, l2dir: str, delta_t_prime_max = 1200.0, signal_threshold = 200
   for file in file_directory.iterdir():
     persistence_mask = np.full((4088,4088),False)
     
-    search_format = r'(\d+)_(\d+)\.asdf$'
+    search_format = '(\d+)_(\d+)\.asdf$'
     matches = re.search(search_format,file.name)
     obsid = matches[1]
     sca = matches[2]
