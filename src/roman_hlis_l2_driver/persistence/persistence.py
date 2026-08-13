@@ -73,7 +73,7 @@ def run(cfg: str, l2dir: str, delta_t_prime_max = 1200.0, signal_threshold = 200
       l2_directory = Path(cfg_file["INDATA"][0][:-3]+"/")
       for l2_file in l2_directory.iterdir():
         print(f"looking at file: {l2_file.name} in the L2 directory")
-        continue
+        break
 
   
   
