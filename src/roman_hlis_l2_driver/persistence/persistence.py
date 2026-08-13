@@ -35,6 +35,7 @@ def run(cfg: str, l2dir: str, delta_t_prime_max = 1200.0, signal_threshold = 200
 
   
   obs_file_path = cfg_file["OBSFILE"]
+  print(f"obs_file_path points to: {obs_file_path}")
   obs_file = f.open(obs_file_path)
   print("loaded fits file")
   date_list = obs_file[1].data["date"]
@@ -64,7 +65,7 @@ def run(cfg: str, l2dir: str, delta_t_prime_max = 1200.0, signal_threshold = 200
 
     
     while delta_t_prime <= delta_t_prime_max:
-      prev_id, delta_t = pf.get_prev_obs(obs_file_path,id=obsid)
+      prev_id, delta_t = pf.get_prev_obs(obs_file_path,id=int(obsid))
       # delta_t returned in days, convert to seconds
       delta_t *= 86400 # (24*60*60) to go from days to secs
       delta_t_prime = delta_t + exptime[prev_id]
