@@ -47,11 +47,11 @@ def run(cfg: str, l2dir: str, delta_t_prime_max = 1200.0, signal_threshold = 200
     persistence_mask = np.full((4088,4088),False)
     
     search_format = r'(\d+)_(\d+)\.asdf$'
-    matches = re.search(search_format,file)
+    matches = re.search(search_format,str(file))
     obsid = matches[1]
     sca = matches[2]
 
-    print(f"this file is: {file}, id: {obsid}, sca: {sca}")
+    print(f"this file is: {str(file)}, id: {obsid}, sca: {sca}")
 
     delta_t = 0
     delta_t_prime = 0
@@ -65,8 +65,8 @@ def run(cfg: str, l2dir: str, delta_t_prime_max = 1200.0, signal_threshold = 200
       delta_t_prime = delta_t + exptime[prev_id]
       print(delta_t_prime)
       l2_directory = Path(cfg_file["INDATA"][0][:-3]+"/")
-      for file in l2_directory.iterdir():
-        print(f"looking at file: {file} in the L2 directory")
+      for l2_file in l2_directory.iterdir():
+        print(f"looking at file: {str(l2_file)} in the L2 directory")
         break
 
   
