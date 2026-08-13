@@ -86,8 +86,8 @@ def run(cfg: str, l2dir: str, delta_t_prime_max = 1200.0, signal_threshold = 200
         data_array = current_file['roman']['data']
         ny,nx = data_array.shape
 
-        for j in range(len(ny)):
-          for i in range(len(nx)):
+        for j in range(ny):
+          for i in range(nx):
             dn_per_s = data_array[j][i]
             dn = dn_per_s * exptime
             if dn >= signal_threshold:
