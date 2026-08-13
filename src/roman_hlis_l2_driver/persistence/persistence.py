@@ -52,7 +52,7 @@ def run(cfg: str, l2dir = None, delta_t_prime_max = 1200.0, signal_threshold = 2
     print(f"INDATA: {file_directory}")
 
     # L2 directory containing previous observations
-    if l2dir = None:
+    if l2dir is None:
         l2_directory = Path(cfg_file["INDATA"][0][:-3]+"/")
     else:
         l2_directory = Path(l2dir)
