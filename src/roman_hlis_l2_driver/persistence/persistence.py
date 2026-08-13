@@ -5,7 +5,9 @@ import json
 import numpy as np
 
 import persistence_flag as pf
+import asdf as a
 from astropy.io import fits as f
+
 from pyimcom.config import Config
 from pathlib import Path
 
@@ -25,9 +27,9 @@ def run(cfg: str, l2dir: str, delta_t_prime_max = 1200.0, signal_threshold = 200
 
     Returns
     -------
-    prev_id: int
+    persistence_mask: np.array
         #
-    """
+  """
   # open the config file
   with open(cfg, 'r') as file:
     cfg_file = json.load(file)
@@ -68,12 +70,33 @@ def run(cfg: str, l2dir: str, delta_t_prime_max = 1200.0, signal_threshold = 200
       prev_id, delta_t = pf.get_prev_obs(obs_file_path,id=int(obsid))
       # delta_t returned in days, convert to seconds
       delta_t *= 86400 # (24*60*60) to go from days to secs
-      delta_t_prime = delta_t + exptime_list[prev_id]
-      print(f"delta_t: {delta_t}, delta_t_prime: {delta_t_prime}, exptime: {exptime_list[prev_id]}")
+      exptime = exptime_list[prev_id]
+      delta_t_prime = delta_t + exptime
+      print(f"delta_t: {delta_t}, delta_t_prime: {delta_t_prime}, exptime: {exptime}")
       l2_directory = Path(cfg_file["INDATA"][0][:-3]+"/")
+      
       for l2_file in l2_directory.iterdir():
         print(f"looking at file: {l2_file.name} in the L2 directory")
-        break
+        current_file = a.open(l2_file)
+        data_array = current_file['roman']['data']
+        ny,nx = data_array.shape
+
+        for j in range(len(ny)):
+          for i in range(len(nx)):
+            dn_per_s = data_array[j][i]
+            dn = dn_per_s * exptime
+            if dn >= signal_threshold:
+              print(f'Pixel at (y={j},x={i}) has signal of {dn}DN')
+              persistence_mask[j][i] = True
+
+        
+        print("breaking while loop by setting delta_t_prime to 1201")
+        delta_t_prime = 1201
+        
+        
+  return persistence_mask
+
+
 
   
   
