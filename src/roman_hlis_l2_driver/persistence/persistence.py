@@ -44,14 +44,16 @@ def run(cfg: str, l2dir: str, delta_t_prime_max = 1200.0, signal_threshold = 200
   print(f"file_directory points to: {file_directory}")
 
   for file in file_directory.iterdir():
+    print(f"this file is: {file.name}")
+    
     persistence_mask = np.full((4088,4088),False)
     
-    search_format = '(\d+)_(\d+)\.asdf$'
+    search_format = '_(\d+)_(\d+)\.asdf$'
     matches = re.search(search_format,file.name)
     obsid = matches[1]
     sca = matches[2]
 
-    print(f"this file is: {file.name}, id: {obsid}, sca: {sca}")
+    print(f"found id: {obsid}, and sca: {sca}")
 
     delta_t = 0
     delta_t_prime = 0
