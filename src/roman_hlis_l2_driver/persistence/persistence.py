@@ -50,7 +50,7 @@ def run(cfg: str, l2dir: str, delta_t_prime_max = 1200.0, signal_threshold = 200
     obsid = matches[1]
     sca = matches[2]
 
-    print(f"this file is: {}, id: {}, sca: {}")
+    print(f"this file is: {file}, id: {obsid}, sca: {sca}")
 
     delta_t = 0
     delta_t_prime = 0
