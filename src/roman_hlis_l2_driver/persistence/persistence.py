@@ -48,7 +48,6 @@ def run(cfg: str,l2dir=None,delta_t_prime_max=1200.0,signal_threshold=20000.0):
 
     # Read what we need while the FITS file is open
     with f.open(obs_file_path) as obs_file:
-        date_list = obs_file[1].data["date"].copy()
         exptime_list = obs_file[1].data["exptime"].copy()
 
     # L2.1 directory containing current observations
@@ -56,10 +55,8 @@ def run(cfg: str,l2dir=None,delta_t_prime_max=1200.0,signal_threshold=20000.0):
     print(f"INDATA: {file_directory}")
 
     # L2 directory containing previous observations
-    if l2dir is None:
-        l2_directory = Path(cfg_file["INDATA"][0][:-3] + "/")
-    else:
-        l2_directory = Path(l2dir)
+    l2_directory = (Path(cfg_file["INDATA"][0][:-3] + "/")
+        if l2dir is None else Path(l2dir))
 
     print(f"L2 directory: {l2_directory}")
 
