@@ -80,29 +80,27 @@ def run(cfg: str, l2dir: str, delta_t_prime_max = 1200.0, signal_threshold = 200
         l2_matches = re.search(search_format,l2_file.name)
         if l2_matches is None:
           continue
-        print(f"now looking in the L2 directory @ {l2_directory}")
-        print(f"looking at file: {l2_file.name}")
-        current_file = a.open(l2_file)
-        data_array = current_file['roman']['data']
-        ny,nx = data_array.shape
+        if l2_matches[1] == prev_id:
+          print(f"now looking in the L2 directory @ {l2_directory}")
+          print(f"L2 file obsid {l2_matches[1]} matches current prev_id")
+          print(f"looking at file: {l2_file.name}")
+          current_file = a.open(l2_file)
+          data_array = current_file['roman']['data']
+          ny,nx = data_array.shape
+  
+          for j in range(ny):
+            for i in range(nx):
+              dn_per_s = data_array[j][i]
+              dn = dn_per_s * exptime
+              if dn >= signal_threshold:
+                print(f'Pixel at (y={j},x={i}) has signal of {dn}DN')
+                persistence_mask[j][i] = True
 
-        for j in range(ny):
-          for i in range(nx):
-            dn_per_s = data_array[j][i]
-            dn = dn_per_s * exptime
-            if dn >= signal_threshold:
-              print(f'Pixel at (y={j},x={i}) has signal of {dn}DN')
-              persistence_mask[j][i] = True
+        else:
+          continue
 
         
         print("breaking while loop by setting delta_t_prime to 1201")
         delta_t_prime = 1201
         
-        
   return persistence_mask
-
-
-
-  
-  
-  
