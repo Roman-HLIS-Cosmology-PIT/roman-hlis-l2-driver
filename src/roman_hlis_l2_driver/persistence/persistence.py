@@ -77,8 +77,8 @@ def run(cfg: str, l2dir: str, delta_t_prime_max = 1200.0, signal_threshold = 200
       
       for l2_file in l2_directory.iterdir():
         search_format = '_(\d+)_(\d+)\.asdf$'
-        matches = re.search(search_format,file.name)
-        if matches is None:
+        l2_matches = re.search(search_format,l2_file.name)
+        if l2_matches is None:
           continue
         print(f"now looking in the L2 directory @ {l2_directory}")
         print(f"looking at file: {l2_file.name}")
