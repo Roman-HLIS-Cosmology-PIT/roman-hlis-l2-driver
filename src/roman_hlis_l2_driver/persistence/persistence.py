@@ -33,53 +33,48 @@ def run(cfg: str, l2dir = None, delta_t_prime_max = 1200.0, signal_threshold = 2
         List containing the cumulative persistence mask and the
         previous observation IDs used to construct it.
     """
-  # open the config file
-  with open(cfg, 'r') as file:
-    
-    cfg_file = json.load(file)
+    # open the config file
+    with open(cfg, 'r') as file:
+        cfg_file = json.load(file)
+        
+    print("loaded config file")
 
-  
-    
-  print("loaded config file")
+    obs_file_path = cfg_file["OBSFILE"]
+    print(f"OBSFILE points to: {obs_file_path}")
+    with f.open(obs_file_path) as obs_file:
+        exptime_list = obs_file[1].data["exptime"].copy
+        
+    date_list = obs_file[1].data["date"]
+    exptime_list = obs_file[1].data["exptime"]
 
-  obs_file_path = cfg_file["OBSFILE"]
-  print(f"OBSFILE points to: {obs_file_path}")
-  with f.open(obs_file_path) as obs_file:
-    exptime_list = obs_file[1].data["exptime"].copy
+    # L2.1 directory containing current observations
+    file_directory = Path(cfg_file["INDATA"][0])
+    print(f"INDATA: {file_directory}")
 
-  date_list = obs_file[1].data["date"]
-  exptime_list = obs_file[1].data["exptime"]
+    # L2 directory containing previous observations
+    if l2dir = None:
+        l2_directory = Path(cfg_file["INDATA"][0][:-3]+"/")
+    else:
+        l2_directory = Path(l2dir)
+    print(f"L2 directory: {l2_directory}")
 
-  # L2.1 directory containing current observations
-  file_directory = Path(cfg_file["INDATA"][0])
-  print(f"INDATA: {file_directory}")
+    search_pattern = re.compile(r"_(\d+)_(\d+)\.asdf$")
+    l2_files = {}
 
-  # L2 directory containing previous observations
-  if l2dir = None:
-    l2_directory = Path(cfg_file["INDATA"][0][:-3]+"/")
-  else:
-    l2_directory = Path(l2dir)
-  print(f"L2 directory: {l2_directory}")
+    for l2_file in l2_directory.iterdir():
+        match = search_pattern.search(l2_file.name)
+        if match is None:
+            continue
+        l2_obsid = int(match.group(1))
+        l2_sca = int(match.group(2))
+        l2_files[(l2_obsid, l2_sca)] = l2_file
 
-  search_pattern = re.compile(r"_(\d+)_(\d+)\.asdf$")
+    print(f"Indexed {len(l2_files)} L2 files")
 
-  l2_files = {}
+    mask_list =[]
 
-  for l2_file in l2_directory.iterdir():
-    
-      match = search_pattern.search(l2_file.name)
-      if match is None:
-          continue
-      l2_obsid = int(match.group(1))
-      l2_sca = int(match.group(2))
-      l2_files[(l2_obsid, l2_sca)] = l2_file
-
-  print(f"Indexed {len(l2_files)} L2 files")
-
-  mask_list =[]
-
-  for infile in file_directory.iterdir():
-    matches = search_pattern.search(infile.name)
+    for infile in file_directory.iterdir():
+        matches = search_pattern.search(infile.name)
     if matches is None:
       continue
     current_obsid = int(matches.group(1))
@@ -95,7 +90,6 @@ def run(cfg: str, l2dir = None, delta_t_prime_max = 1200.0, signal_threshold = 2
     total_delta_t = 0.0
 
     while True:
-
         print(f"Searching for observation before OBSID {search_obsid}")
         result = pf.get_prev_obs(obs_file_path,id=search_obsid)
 
