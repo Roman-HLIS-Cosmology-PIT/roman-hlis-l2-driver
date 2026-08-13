@@ -9,18 +9,19 @@ from astropy.io import fits as f
 from pyimcom.config import Config
 
 
-def run(cfg, delta_t_prime_max = 1200.0, signal_threshold = 20000.0, l2dir: str):
+def run(cfg: str, l2dir: str, delta_t_prime_max = 1200.0, signal_threshold = 20000.0):
   """
     Parameters
     ----------
     cfg: str
         File path to pyIMCOM config json
+    l2dir: str
+        #
     delta_t_prime_max: float
         #
     signal_threshold: float
         #
-    l2dir: str
-        #
+
     Returns
     -------
     prev_id: int
