@@ -7,7 +7,7 @@ import numpy as np
 import persistence_flag as pf
 from astropy.io import fits as f
 from pyimcom.config import Config
-from importlib import Path
+from pathlib import Path
 
 
 def run(cfg: str, l2dir: str, delta_t_prime_max = 1200.0, signal_threshold = 20000.0):
