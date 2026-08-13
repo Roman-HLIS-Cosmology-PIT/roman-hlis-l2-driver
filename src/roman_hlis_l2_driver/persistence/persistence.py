@@ -76,7 +76,7 @@ def run(cfg: str, l2dir = None, delta_t_prime_max = 1200.0, signal_threshold = 2
     for infile in file_directory.iterdir():
         matches = search_pattern.search(infile.name)
     if matches is None:
-      continue
+        continue
     current_obsid = int(matches.group(1))
     sca = int(matches.group(2))
 
