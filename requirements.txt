@@ -1,10 +1,11 @@
 numpy
 scipy
 astropy
-gwcs
+gwcs>=1.0.3
 galsim
 fitsio
-asdf
+asdf>=5.3.1
+asdf-astropy>=0.11.0
 healpy
 roman_datamodels
-pyimcom @ git+https://github.com/Roman-HLIS-Cosmology-PIT/pyimcom
+pyimcom
