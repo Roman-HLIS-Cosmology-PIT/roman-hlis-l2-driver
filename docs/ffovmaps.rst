@@ -37,7 +37,7 @@ The Primary HDU contains the following keywords:
 |            | background.                                     |
 +------------+-------------------------------------------------+
 |``SLOPEMIN``| Signal in DN_lin/s corresponding to code        |
-|            |      1.                                         |
+|            | 1.                                              |
 +------------+-------------------------------------------------+
 |``SLOPEMAX``| Signal in DN_lin/s corresponding to code        |
 |            | 65534.                                          |

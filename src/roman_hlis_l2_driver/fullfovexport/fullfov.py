@@ -10,6 +10,7 @@ FullFoVImageFromFile
 
 """
 
+import copy
 import warnings
 
 import asdf
@@ -19,6 +20,30 @@ from pyimcom.wcsutil import LocWCS
 from roman_datamodels.dqflags import pixel
 
 from .. import pars
+
+PER_SCA_CDS_NOISE = np.array(
+    [
+        17.49,
+        14.20,
+        14.70,
+        15.76,
+        13.64,
+        13.65,
+        13.21,
+        12.49,
+        12.39,
+        15.75,
+        13.94,
+        13.73,
+        16.17,
+        13.46,
+        13.46,
+        13.49,
+        12.64,
+        12.42,
+    ],
+    dtype=np.float32,
+)  # CDS noise in electrons from roman-technical-information
 
 
 def get_t_eff(K, tau, tbar):
@@ -132,6 +157,7 @@ class FullFoVImage:
 
                     start_time = a["roman"]["meta"]["exposure"]["start_time"]
                     mjd = a["roman"]["meta"]["ephemeris"]["time"]
+                    filter = a["roman"]["meta"]["instrument"]["optical_element"]
 
                     # effective gain information
                     try:
@@ -150,7 +176,16 @@ class FullFoVImage:
 
                     # get gain information
                     eqvgain = dslope * t_eff * medgain
-                    bkgndvar1 = np.median(a["roman"]["var_rnoise"]) / dslope**2
+                    # old calculation
+                    # bkgndvar1 = np.median(a["roman"]["var_rnoise"]) / dslope**2
+                    # new version without referring to the read noise frame, in (DN/s)^2
+                    n_frame_in_group = np.array([len(_x) for _x in pmeta["read_pattern"]])
+                    bkgndvar1 = (
+                        (PER_SCA_CDS_NOISE[sca - 1] / medgain) ** 2
+                        / 2.0
+                        * np.sum(pmeta["K"] ** 2 / n_frame_in_group)
+                        / dslope**2
+                    )
                     bkgndvar2 = a["processinfo"]["medsky"] / (t_eff * medgain * dslope**2)
 
             except FileNotFoundError:
@@ -174,7 +209,9 @@ class FullFoVImage:
             new_hdu = fits.ImageHDU(im, name=f"WFI{sca:02d}")
             new_hdu.header["ISVALID"] = (valid, "Was this SCA found?")
             new_hdu.header["HASMASK"] = (mask, "Was a mask applied?")
-            new_hdu.header["HASWCS"] = bool(wcs is not None)
+            new_hdu.header["HASWCS"] = bool(self.wcs is not None)
+            new_hdu.header["MJD"] = (mjd, "MJD of exposure start")
+            new_hdu.header["FILTER"] = (filter, "Filter name")
 
             # for now, not using the pixel-level error map
             new_hdu.header["ERRMAP"] = ("NULL", "Error map name")
@@ -194,6 +231,7 @@ class FullFoVImage:
         # save collected metadata
         phdu.header["MJD"] = mjd
         phdu.header["TSTART"] = str(start_time)
+        phdu.header["FILTER"] = filter
 
         self.hdulist = fits.HDUList(hdulist)  # save this as an HDUList
 
@@ -231,5 +269,5 @@ class FullFoVImageFromFile(FullFoVImage):
 
     def __init__(self, infile):
         with fits.open(infile, memmap=False) as f:
-            self.hdulist = f
+            self.hdulist = copy.deepcopy(f)
             # turn off memmap so that there are no references to disk after this
