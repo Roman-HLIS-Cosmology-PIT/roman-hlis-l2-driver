@@ -9,3 +9,5 @@ asdf-astropy>=0.11.0
 healpy
 roman_datamodels
 pyimcom
+sep
+pandas

@@ -144,7 +144,7 @@ class FullFoVImage:
         for sca in range(1, 1 + pars.n_sca):
             im = np.zeros((n_side, n_side), dtype=np.uint16)
             valid = True
-            wcs = None
+            self.wcs = None
             try:
                 with asdf.open(infile.format(sca)) as a:
                     im[:, :] = np.clip(np.rint(softbias + a["roman"]["data"] / dslope), 1, 2**16 - 1).astype(
@@ -171,8 +171,8 @@ class FullFoVImage:
 
                     # the WCS
                     if wcs_src.lower() == "l2":
-                        wcs = LocWCS(a["roman"]["meta"]["wcs"], N=n_side)
-                        wcs.wcs_approx_sip(p_order=4)
+                        self.wcs = LocWCS(a["roman"]["meta"]["wcs"], N=n_side)
+                        self.wcs.wcs_approx_sip(p_order=4)
 
                     # get gain information
                     eqvgain = dslope * t_eff * medgain
@@ -223,9 +223,9 @@ class FullFoVImage:
                 new_hdu.header["BKGNDVAR"] = (bkgndvar1 + bkgndvar2, "Variance at background level")
 
             # add WCS
-            if wcs is not None:
-                new_hdu.header.update(wcs.approx_wcs.to_header(relax=True))
-                new_hdu.header["MAXWCSER"] = (wcs.wcs_max_err, "max of error map in pixels")
+            if self.wcs is not None:
+                new_hdu.header.update(self.wcs.approx_wcs.to_header(relax=True))
+                new_hdu.header["MAXWCSER"] = (self.wcs.wcs_max_err, "max of error map in pixels")
             hdulist.append(new_hdu)
 
         # save collected metadata
