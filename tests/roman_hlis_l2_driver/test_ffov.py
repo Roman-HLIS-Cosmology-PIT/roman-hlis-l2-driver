@@ -360,7 +360,7 @@ def test_ffov(tmp_path):
             assert h["EXTNAME"] == f"WFI{sca:02d}"
             if h["ISVALID"]:
                 assert h["FILTER"] == "F184"
-                assert h["MJD"] == 62106.1666666667
+                assert np.abs(h["MJD"] - 62106.1666666667) < 1.0e-6
                 assert 0.45 < h["EQVGAIN"] < 0.46
             else:
                 assert sca in [1, 8, 11]  # must be one of the ones we "broke"
