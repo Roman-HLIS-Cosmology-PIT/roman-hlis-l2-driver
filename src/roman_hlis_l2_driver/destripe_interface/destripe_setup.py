@@ -1,4 +1,5 @@
 import concurrent.futures
+import multiprocessing as mp
 import os
 import sys
 
@@ -103,7 +104,9 @@ def setup_all_files(
         # this is so that pytest knows _setup_one_file is being run
         _setup_one_file((use_files[0], outprefix, Stn.sca_nside, noiseid, wcs_order, verbose))
     # now the main run
-    with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as e:
+    with concurrent.futures.ProcessPoolExecutor(
+        max_workers=max_workers, mp_context=mp.get_context("spawn")
+    ) as e:
         e.map(_setup_one_file, use_files2)
 
     return use_files
