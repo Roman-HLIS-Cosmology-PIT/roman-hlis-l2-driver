@@ -220,6 +220,7 @@ def test_mask_many(tmp_path):
                     "data": image,
                     "dq": dq,
                 },
+                "mask": np.zeros((4088, 4088), dtype=np.uint8)
             }
         ).write_to(f"{tmp_path}/obs_{obsid}_{sca}.asdf")
 
