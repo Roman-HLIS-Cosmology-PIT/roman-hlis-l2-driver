@@ -3,7 +3,7 @@ import json
 import os
 import sys
 import warnings
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
 import asdf
 import numpy as np
@@ -12,9 +12,7 @@ from astropy.io import fits
 from pyimcom.config import Settings as Stn
 from pyimcom.utils.compareutils import get_overlap_matrix, map_sca2sca
 from pyimcom.wcsutil import PyIMCOM_WCS
-from scipy.interpolate import RegularGridInterpolator
-from scipy.ndimage import maximum_filter, convolve1d, map_coordinates
-from scipy.signal import convolve2d
+from scipy.ndimage import convolve1d, map_coordinates, maximum_filter
 
 from ..name_util import stem_l2, stem_mask
 
@@ -305,7 +303,7 @@ class OutlierMap:
 
         # get the list of other ("j") observations
         jlist = list(np.where(self.ovmat[iobs, :] > 1e-3)[0])
-        #ND: preassigning the stack here to save memory
+        # ND: preassigning the stack here to save memory
         stack = np.full((len(jlist) + 1, Stn.sca_nside, Stn.sca_nside), np.nan, dtype=np.float32)
         ct = np.zeros((Stn.sca_nside, Stn.sca_nside), dtype=np.uint8)
         ns = 1
@@ -319,7 +317,7 @@ class OutlierMap:
             coords = [y_target, x_target]
 
             interp_data = map_coordinates(
-                self.image[jobs, :, :], coords, order=1, mode="constant", cval=0.0, prefilter = False
+                self.image[jobs, :, :], coords, order=1, mode="constant", cval=0.0, prefilter=False
             )
 
             interp_good_raw = map_coordinates(
@@ -328,7 +326,7 @@ class OutlierMap:
                 order=1,
                 mode="constant",
                 cval=0.0,
-                prefilter = False
+                prefilter=False,
             )
             interp_good = interp_good_raw > 1e-9
             ct += interp_good
@@ -532,7 +530,6 @@ class OutlierMap:
             for future in futures:
                 di, r = future.result()
                 self.outmask[di, :, :] = r
-
 
     def save_data(self, outfile, update=False, verbose=False):
         """
