@@ -211,13 +211,13 @@ def brightobj_from_scaimg(infile, obsid=-1, thresh=50.0, verbose=False):
             )
         if len(ring[0]) == 0:
             # This isn't supposed to happen.
-            print("ERROR")
-            print(map[oi["ymin"] : oi["ymax"] + 1, oi["xmin"] : oi["xmax"] + 1] == i + 1)
-            print("x range", oi["xmin"], oi["xmax"], "y range", oi["ymin"], oi["ymax"])
-            print((xcc[i], ycc[i]), "r =", rcc[i])
-            print("Mask:")
-            print(mask[oi["ymin"] : oi["ymax"] + 1, oi["xmin"] : oi["xmax"] + 1])
-            print("---")
+            # print("ERROR")
+            # print(map[oi["ymin"] : oi["ymax"] + 1, oi["xmin"] : oi["xmax"] + 1] == i + 1)
+            # print("x range", oi["xmin"], oi["xmax"], "y range", oi["ymin"], oi["ymax"])
+            # print((xcc[i], ycc[i]), "r =", rcc[i])
+            # print("Mask:")
+            # print(mask[oi["ymin"] : oi["ymax"] + 1, oi["xmin"] : oi["xmax"] + 1])
+            # print("---")
             raise ValueError("Invalid mask.")
         eflux[i] = max(np.mean(img[ring]) / np.mean(fluxfrac[ring]), obj[i]["flux"])
     obj = rfn.append_fields(
