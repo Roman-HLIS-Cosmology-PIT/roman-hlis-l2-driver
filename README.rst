@@ -1,4 +1,8 @@
-.. image:: https://codecov.io/gh/Roman-HLIS-Cosmology-PIT/roman-hlis-l2-driver/graph/badge.svg?token=lZlsjikXXb 
+|badge1| |badge2|
+
+.. |badge1| image:: https://codecov.io/gh/Roman-HLIS-Cosmology-PIT/roman-hlis-l2-driver/graph/badge.svg
+
+.. |badge2| image:: https://github.com/Roman-HLIS-Cosmology-PIT/roman-hlis-l2-driver/actions/workflows/smoke-test.yml/badge.svg
 
 Level 2 Processing Tools
 ########################

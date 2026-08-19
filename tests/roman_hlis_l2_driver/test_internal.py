@@ -10,7 +10,65 @@ from gwcs import coordinate_frames, wcs
 from psfsim.polychrom import PolychromaticPSF
 from roman_datamodels.dqflags import pixel
 from roman_hlis_l2_driver.starcatalogs.internal import brightobj_from_manyimg, encirc_center
+from roman_hlis_l2_driver.starcatalogs.interp import extract_spikedata, interp5pt
+from roman_hlis_l2_driver.starcatalogs.main import spikedata_to_mask, stardata_to_mask_wcs
 from scipy.ndimage import shift
+
+
+def test_spikedata_to_mask():
+    """Test for converting spike information into a 2D mask."""
+
+    sp_theta = np.linspace(15, 345, 12) * np.pi / 180.0
+    sp_length = np.array([60, 60, 60, 60, 60, 100, 60, 60, 60, 60, 60, 60])
+    sp_width = np.array([6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 3])
+
+    mask1 = spikedata_to_mask(4088, 2000.0, 45.0, sp_theta, sp_length, sp_width, np.pi / 180.0 * 6.5)
+
+    assert np.all(~mask1[105:, :])
+    assert np.all(mask1[104, 1986:1992] == np.array([False, True, True, True, True, False]))
+    assert np.all(mask1[104, 2009:2015] == np.array([False, True, True, True, True, False]))
+    assert np.count_nonzero(mask1[:, 1922]) == 13
+    assert np.count_nonzero(mask1[25:45, 2039]) == 8
+
+
+def test_interp5pt():
+    """Interpolation test function."""
+
+    u = 0.7
+    v = 0.2
+    upos = np.array([-1, 1, 0, -1, 1, u])
+    vpos = np.array([-1, -1, 0, 1, 1, v])
+    image = np.zeros((40, 6))
+    for i in range(40):
+        image[i, :] = (
+            np.cos(i) * upos
+            - i * np.sin(i) * vpos
+            + 0.9**i * upos * vpos
+            + np.exp(-np.sin(2 * i))
+            + (i // 10) * upos * vpos
+        )
+    i2 = image[:, :-1]
+    assert np.allclose(image[:, -1], interp5pt(i2, u, v, 1))
+
+    # now try a few other orientations
+    assert np.allclose(image[:, -1], interp5pt(i2.T, u, v, 0))
+    assert np.allclose(image[:, -1].reshape((5, 8)), interp5pt(i2.reshape((5, 8, 5)), u, v, 2))
+
+    # just checking this isn't all 0's so it didn't fail trivially
+    assert np.all(np.abs(i2) >= 0.01)
+
+
+def test_extract_spikedata():
+    """Simple test for getting diffraction spike information."""
+
+    ls = [14, 22, 64, 100]
+    ws = [2.2, 2.6, 4.4, 5.5]
+    for j in range(4):
+        d = extract_spikedata("H", 1, 4087.5, 4087.5, 3e-4 / 10**j)
+        print(d)
+        assert np.all(np.abs(np.degrees(d[0]) - np.linspace(15, 345, 12)) < 10)
+        assert np.all(np.abs(np.log(d[1] / ls[j])) < 0.2)
+        assert np.all(np.abs(np.log(d[2] / ws[j])) < 0.2)
 
 
 def test_encirc_center():
@@ -165,6 +223,10 @@ def test_mask_many(tmp_path):
             }
         ).write_to(f"{tmp_path}/obs_{obsid}_{sca}.asdf")
 
+        from astropy.io import fits
+
+        fits.PrimaryHDU(image).writeto(f"{tmp_path}/obs_{obsid}_{sca}.fits")
+
     # Now run the star finder
     stars_recovered = brightobj_from_manyimg(tmp_path + "/obs_{0:d}_{1:d}.asdf")
     print(stars_recovered)
@@ -177,3 +239,27 @@ def test_mask_many(tmp_path):
     assert np.all(np.abs(stars_unique["ra"] - np.array([16.49, 16.495])) < 5.0e-5)
     assert np.all(np.abs(stars_unique["dec"] - np.array([-19.438, -19.438])) < 5.0e-5)
     assert np.all(np.abs(np.log(stars_unique["eflux"] / np.array([2.0e5, 4.0e5]))) < 0.25)
+
+    n_gt2 = [3032, 2483]
+
+    for obs in obslist:
+        (obsid, sca, ra, dec, lonpole) = obs
+        l2 = f"{tmp_path}/obs_{obsid}_{sca}.asdf"
+        thismask = stardata_to_mask_wcs(l2, stars_unique, 0.1)
+        if (obsid, sca) == (145, 11):
+            assert np.all(~thismask[:2044, :])
+            assert np.count_nonzero(thismask[3964, 2100:2200]) == 14
+            assert np.count_nonzero(thismask[3964, 2200:2250]) == 11
+            assert np.count_nonzero(thismask[4030:4070, 2287]) == 16
+            assert np.all(~thismask[4069:4076, 2349:2356])
+
+        with asdf.open(l2) as a:
+            im = np.where(~thismask, a["roman"]["data"], -1)
+        assert np.abs(np.count_nonzero(im > 2) - n_gt2[0]) < 10
+
+        # uncomment if you want to make images for debugging
+        # from astropy.io import fits
+        # fits.PrimaryHDU(im).writeto(f"{tmp_path}/obs_{obsid}_{sca}_masked.fits")
+
+        # remove first item
+        n_gt2 = n_gt2[1:]
