@@ -3,7 +3,7 @@ import json
 import os
 import sys
 import warnings
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 
 import asdf
 import numpy as np
@@ -521,15 +521,16 @@ class OutlierMap:
         # initialize the output
         self.outmask = np.zeros((len(ilist), Stn.sca_nside, Stn.sca_nside), dtype=bool)
 
-        # 1/3 as many workers since this is memory intensive
-        workers = (self.max_workers + 2) // 3
+        def _outlier_mask(di):
+            """Wrapper for outlier_mask"""
+            print("Running:", di)
+            sys.stdout.flush()
+            r, _ = self.outlier_mask(ilist[0] + di, **kwargs)
+            self.outmask[di, :, :] = r
 
-        with ProcessPoolExecutor(max_workers=workers) as e:
-            futures = [e.submit(self._worker_outlier_mask, di, kwargs) for di in range(len(ilist))]
-            # As each process finishes, collect the returned array and save it
-            for future in futures:
-                di, r = future.result()
-                self.outmask[di, :, :] = r
+        # 1/3 as many workers since this is memory intensive
+        with ThreadPoolExecutor(max_workers=(self.max_workers + 2) // 3) as e:
+            e.map(_outlier_mask, list(range(len(ilist))))
 
     def save_data(self, outfile, update=False, verbose=False):
         """
