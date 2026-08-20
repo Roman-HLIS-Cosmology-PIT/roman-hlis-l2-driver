@@ -336,11 +336,13 @@ def brightobj_from_manyimg(
 
     Returns
     -------
-    np.recarray
+    ccat : np.recarray
         Bright object catalog from ``sep.extract``. The most important fields are:
         * ``idsca``: The object ID/SCA of the detection (in the form ``100*obsid+sca``).
         * ``ra``, ``dec``: The object position (in degrees).
         * ``eflux``: The estimated flux (in total DN/s).
+    idsca : list of (int, int)
+        The list of obsid and sca used.
 
     See Also
     --------
@@ -412,4 +414,4 @@ def brightobj_from_manyimg(
 
     if clean:
         ccat = ccat[np.where(np.logical_or(ccat["parent"] != -1, ccat["nchild"] > 0))]
-    return ccat
+    return ccat, idsca

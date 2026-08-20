@@ -5,6 +5,7 @@ import asdf
 import numpy as np
 from pyimcom.wcsutil import PyIMCOM_WCS
 
+from .internal import brightobj_from_manyimg
 from .interp import extract_spikedata
 
 
@@ -59,7 +60,7 @@ def spikedata_to_mask(nside, x, y, sp_theta, sp_length, sp_width, wedge):
     return mask
 
 
-def stardata_to_mask(use_filter, sca, x, y, thresh):
+def stardata_to_mask(use_filter, sca, x, y, thresh, nside=4088):
     """
     Makes a spike mask for a star catalog in Science coordinates.
 
@@ -73,6 +74,8 @@ def stardata_to_mask(use_filter, sca, x, y, thresh):
         The location of the bright star to mask.
     thresh : np.ndarray of float
         The threshold (relative to star brightness) to mask.
+    nside : int, optional
+        Side length of the SCA (4088 for Roman).
 
     Returns
     -------
@@ -82,7 +85,6 @@ def stardata_to_mask(use_filter, sca, x, y, thresh):
     """
 
     n = len(x)
-    nside = 4088
 
     mask = np.zeros((nside, nside), dtype=bool)
     for j in range(n):
@@ -131,6 +133,9 @@ def stardata_to_mask_wcs(l2file, catalog, thresh, dp=256.0):
         use_filter = filterkeys[a["roman"]["meta"]["instrument"]["optical_element"]]
         sca = int(a["roman"]["meta"]["instrument"]["detector"][-2:])
         pwcs = PyIMCOM_WCS(a["roman"]["meta"]["wcs"])
+        nside = np.shape(a["roman"]["data"])[-1]
+
+    assert nside == 4088  # REMOVE
 
     # extract only stars near that SCA
     ctr = pwcs.all_pix2world([[2043.5, 2043.5]], 0)[0]
@@ -150,3 +155,102 @@ def stardata_to_mask_wcs(l2file, catalog, thresh, dp=256.0):
     trim = np.logical_and(np.abs(x - 2043.5) < 2044.5 + dp, np.abs(y - 2043.5) < 2044.5 + dp)
 
     return stardata_to_mask(use_filter, sca, x[trim], y[trim], thresh / subcatalog["eflux"][trim])
+
+
+def stardata_to_mask_manyfiles(l2files, catalog, thresh, dp=256.0, update=True):
+    """
+    Makes a spike mask for a star catalog in world coordinates.
+
+    Parameters
+    ----------
+    l2files : list of str
+        The input ASDF L2 file for this exposure.
+    catalog : np.recarray
+        The star catalog; should have at least ra, dec, and estar.
+    thresh : float
+        The threshold of diffraction spike brightness to mask.
+    dp : float, optional
+        The distance in pixels around the image to consider for masking stars.
+    update : bool, optional
+        Whether to update the "mask" 0x8 bit in the ASDF files. (You should only need to
+        turn this off for diagnostics.)
+
+    Returns
+    -------
+    np.ndarray of bool
+        Table of the masked pixels in each exposure; shape (nexp, nside, nside).
+
+    """
+
+    # Extract setup information
+    nexp = len(l2files)
+    with asdf.open(l2files[0]) as a:
+        nside = np.shape(a["roman"]["data"])[-1]
+    mask = np.zeros((nexp, nside, nside), dtype=bool)
+
+    for j in range(nexp):
+        mask[j, :, :] = stardata_to_mask_wcs(l2files[j], catalog, thresh, dp=dp)
+
+    if update:
+        for j in range(nexp):
+            with asdf.open(l2files[j], mode="rw") as a:
+                a["mask"] &= ~np.uint8(0x8)
+                a["mask"] |= mask[j].astype(np.uint8) << 3
+                a["processinfo"]["spike_complete"] = True
+                a.update()
+
+    return mask
+
+
+def spike_driver(
+    infile_format,
+    thresh_mask,
+    dp=256.0,
+    update=True,
+    thresh_detect=50.0,
+    maximg=None,
+    matchrad=0.0002777777777777778,
+):
+    """
+    Extract bright objects from a group of images.
+
+    Parameters
+    ----------
+    infile_format : str
+        The input file as a formatted string. One should be able to write
+        ``infformat.format(obsid, sca)``
+    thresh_mask : float
+        The threshold of diffraction spike brightness to mask.
+    dp : float, optional
+        The distance in pixels around the image to consider for masking stars.
+    update : bool, optional
+        Whether to update the "mask" 0x8 bit in the ASDF files. (You should only need to
+        turn this off for diagnostics.)
+    thresh_detect : float, optional
+        The threshold to use (in DN/s).
+    maximg : int, optional
+        Use a maximum of this many SCAs; primarily used for testing.
+    matchrad : float, optional
+        Matching radius for the catalog (in degrees).
+
+    Returns
+    -------
+    stars_unique : np.recarray
+        Bright object catalog from ``sep.extract``. The most important fields are:
+        * ``idsca``: The object ID/SCA of the detection (in the form ``100*obsid+sca``).
+        * ``ra``, ``dec``: The object position (in degrees).
+        * ``eflux``: The estimated flux (in total DN/s).
+    npix_mask : int
+        The total number of pixels masked.
+
+    """
+
+    stars_recovered, idsca = brightobj_from_manyimg(infile_format, thresh=thresh_detect, clean=True)
+    stars_unique = stars_recovered[stars_recovered["nchild"] > 0]
+
+    l2files = [infile_format.format(*i) for i in idsca]
+    print(l2files)
+    m = stardata_to_mask_manyfiles(l2files, stars_unique, thresh_mask, dp=dp, update=update)
+    npix_mask = np.count_nonzero(m)
+
+    return stars_unique, npix_mask

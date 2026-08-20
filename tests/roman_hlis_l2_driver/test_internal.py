@@ -11,7 +11,12 @@ from psfsim.polychrom import PolychromaticPSF
 from roman_datamodels.dqflags import pixel
 from roman_hlis_l2_driver.starcatalogs.internal import brightobj_from_manyimg, encirc_center
 from roman_hlis_l2_driver.starcatalogs.interp import extract_spikedata, interp5pt
-from roman_hlis_l2_driver.starcatalogs.main import spikedata_to_mask, stardata_to_mask_wcs
+from roman_hlis_l2_driver.starcatalogs.main import (
+    spike_driver,
+    spikedata_to_mask,
+    stardata_to_mask_manyfiles,
+    stardata_to_mask_wcs,
+)
 from scipy.ndimage import shift
 
 
@@ -229,12 +234,12 @@ def test_mask_many(tmp_path):
         fits.PrimaryHDU(image).writeto(f"{tmp_path}/obs_{obsid}_{sca}.fits")
 
     # Now run the star finder
-    stars_recovered = brightobj_from_manyimg(tmp_path + "/obs_{0:d}_{1:d}.asdf")
+    stars_recovered, _ = brightobj_from_manyimg(tmp_path + "/obs_{0:d}_{1:d}.asdf")
     print(stars_recovered)
     assert len(stars_recovered) == 5
     print("\n")
 
-    stars_recovered = brightobj_from_manyimg(tmp_path + "/obs_{0:d}_{1:d}.asdf", clean=True, verbose=True)
+    stars_recovered, _ = brightobj_from_manyimg(tmp_path + "/obs_{0:d}_{1:d}.asdf", clean=True, verbose=True)
     stars_unique = stars_recovered[stars_recovered["nchild"] > 0]
     assert np.all(stars_unique["idsca"] == np.array([14812, 14812]))
     assert np.all(np.abs(stars_unique["ra"] - np.array([16.49, 16.495])) < 5.0e-5)
@@ -242,10 +247,13 @@ def test_mask_many(tmp_path):
     assert np.all(np.abs(np.log(stars_unique["eflux"] / np.array([2.0e5, 4.0e5]))) < 0.25)
 
     n_gt2 = [3032, 2483]
+    nmask = []
 
+    l2files = []
     for obs in obslist:
         (obsid, sca, ra, dec, lonpole) = obs
         l2 = f"{tmp_path}/obs_{obsid}_{sca}.asdf"
+        l2files.append(l2)
         thismask = stardata_to_mask_wcs(l2, stars_unique, 0.1)
         if (obsid, sca) == (145, 11):
             assert np.all(~thismask[:2044, :])
@@ -258,9 +266,41 @@ def test_mask_many(tmp_path):
             im = np.where(~thismask, a["roman"]["data"], -1)
         assert np.abs(np.count_nonzero(im > 2) - n_gt2[0]) < 10
 
+        nmask.append(np.count_nonzero(thismask))
+
         # uncomment if you want to make images for debugging
         # from astropy.io import fits
         # fits.PrimaryHDU(im).writeto(f"{tmp_path}/obs_{obsid}_{sca}_masked.fits")
 
         # remove first item
         n_gt2 = n_gt2[1:]
+
+    # run many files
+    q = stardata_to_mask_manyfiles(l2files, stars_unique, 0.1)
+    assert np.shape(q) == (2, 4088, 4088)
+    print(np.count_nonzero(q[0]))
+    print(np.count_nonzero(q[1]))
+    nmask2 = nmask.copy()
+
+    # now check the right number of pixels are masked
+    for obs in obslist:
+        (obsid, sca, ra, dec, lonpole) = obs
+        l2 = f"{tmp_path}/obs_{obsid}_{sca}.asdf"
+        with asdf.open(l2, mode="rw") as a:
+            assert np.count_nonzero(a["mask"] & 0x8) == nmask[0]
+            a["mask"] &= ~np.uint8(0x8)  # reset
+        nmask = nmask[1:]
+
+    # alternate run many files
+    starcat, tot_nmask = spike_driver(tmp_path + "/obs_{0:d}_{1:d}.asdf", 0.1)
+    for obs in obslist:
+        (obsid, sca, ra, dec, lonpole) = obs
+        l2 = f"{tmp_path}/obs_{obsid}_{sca}.asdf"
+        with asdf.open(l2, mode="rw") as a:
+            assert np.count_nonzero(a["mask"] & 0x8) == nmask2[0]
+        nmask2 = nmask2[1:]
+
+    # check the return values
+    assert 38000 < tot_nmask < 41000
+    assert np.allclose(starcat["ra"], np.array([16.49000774, 16.49500884]))
+    assert np.allclose(starcat["dec"], np.array([-19.43800724, -19.43800151]))
