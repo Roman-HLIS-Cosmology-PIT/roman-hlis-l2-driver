@@ -173,3 +173,19 @@ def test_get_prev_obs_with_nbackup_passed(observation_table):
     result1, result2 = get_prev_obs(str(observation_table), id=0, nbackup=2)
 
     assert result1 == 1 and np.abs(result2 - 0.02) < 1.0e-5
+
+
+#make a pytest.fixture here for: writing a config json, 
+# make a sample observation table fits,
+# (can use OU24 tables for formatting), and make a
+# series of corresponding asdf images (can use the template of test_many_stars)
+# and re-use the same PSF over and over instead of re-drawing it for each sca
+# then,
+def test_persistence_flagging(test_config):
+    """ Make sure persistence.run() returns a persistence mask and
+    a list of the correct obsids used to build it, namely: (INSERT
+    APPLICABLE OBSIDS)
+    """
+    test_mask_list = run(test_config)
+    assert test_mask_list[0][100,100]
+    assert test_mast_list[0].shape is (4088,4088)
