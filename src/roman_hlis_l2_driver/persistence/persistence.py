@@ -10,7 +10,7 @@ from pathlib import Path
 from astropy.io import fits as f
 from erfa import ErfaWarning
 
-import .persistence_flag as pf
+from . import persistence_flag as pf
 
 
 def run(cfg: str,l2dir=None,delta_t_prime_max=1200.0,signal_threshold=20000.0):
