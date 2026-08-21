@@ -164,45 +164,26 @@ def asdf_files(tmp_path):
         7: [("star_1",bright_flux)],
         8: [("star_3",bright_flux)],
     }
-    #create all asdf files
+    #create all L2 asdf files
     injected_pixels = {}
     for obsid in range(10):
         image = np.zeros((nside,nside),dtype=np.float32)
         injected_pixels[obsid] = {}
+        # inject all stars associated with this obsid
         for star, flux in stars_by_obsid.get(obsid,[]):
             ra_star,dec_star = sky_positions[star]
             ypix,xpix = inject_star(image=image,wcsobj=wcsobj,
                                     psf=psf,ra=ra_star,dec=dec_star,
                                     flux=flux,ov=ov,n=n)
-            dq = np.zeros((nside,nside),dtype=np.uint32)
-            dq |= np.where(image > 500.0, pixel.SATURATED, 0)
-            es = np.where(image > 500.0, 6, -1)
             
-            tree = {
-                "processinfo": {
-                    "endslice": es,
-                },
-                "roman": {
-                    "meta": {
-                        "wcs": wcsobj,
-                        "instrument": {
-                            "optical_element": "F158",
-                            "detector": f"WFI{sca:02d}",
-                        },
-                    },
-                    "data": image,
-                    "dq": dq,
-                },
-            }
-            outfile = ( l2_dir/f"sim_L2_H158_{obsid}_{sca}.asdf")
-            asdf.AsdfFile(tree).write_to(outfile,all_array_compression="zlib")
-        # generate one asdf file in the L2.1 directory to get the ball rolling
-        current_image = np.zeros((nside,nside),dtype=np.float32)
-        current_dq = np.zeros((nside,nside),dtype=np.uint32)
-        current_es = np.full((nside,nside),-1,dtype=np.int8)
-        current_tree = {
+            injected_pixels[obsid][star] = (ypix,xpix)
+        dq = np.zeros((nside,nside),dtype=np.uint32)
+        dq |= np.where(image > 500.0, pixel.SATURATED, 0)
+        es = np.where(image > 500.0, 6, -1)
+        
+        tree = {
             "processinfo": {
-                "endslice": current_es,
+                "endslice": es,
             },
             "roman": {
                 "meta": {
@@ -212,23 +193,46 @@ def asdf_files(tmp_path):
                         "detector": f"WFI{sca:02d}",
                     },
                 },
-                "data": current_image,
-                "dq": current_dq,
+                "data": image,
+                "dq": dq,
             },
         }
-        current_path = (l21_dir/f"sim_L2_1_H158_9_{sca}.asdf")
-        asdf.AsdfFile(current_tree).write_to(current_path,all_array_compression="zlib")
+        outfile = ( l2_dir/f"sim_L2_H158_{obsid}_{sca}.asdf")
+        asdf.AsdfFile(tree).write_to(outfile,all_array_compression="zlib")
         
-        return {
-            "l2_dir": l2_dir,
-            "l21_dir": l21_dir,
-            "current_path": current_path,
-            "pixels": {
-                name: (int(round(y)),int(round(x)))
-                for name, (x,y) in detector_locations.items()
+    # generate one asdf file in the L2.1 directory to get the ball rolling
+    current_image = np.zeros((nside,nside),dtype=np.float32)
+    current_dq = np.zeros((nside,nside),dtype=np.uint32)
+    current_es = np.full((nside,nside),-1,dtype=np.int8)
+    current_tree = {
+        "processinfo": {
+            "endslice": current_es,
+        },
+        "roman": {
+            "meta": {
+                "wcs": wcsobj,
+                "instrument": {
+                    "optical_element": "F158",
+                    "detector": f"WFI{sca:02d}",
+                },
             },
-            "expected_obsids": [8,7,6,5,4,3]
-        }
+            "data": current_image,
+            "dq": current_dq,
+        },
+    }
+    current_path = (l21_dir/f"sim_L2_1_H158_9_{sca}.asdf")
+    asdf.AsdfFile(current_tree).write_to(current_path,all_array_compression="zlib")
+    
+    return {
+        "l2_dir": l2_dir,
+        "l21_dir": l21_dir,
+        "current_path": current_path,
+        "pixels": {
+            name: (int(round(y)),int(round(x)))
+            for name, (x,y) in detector_locations.items()
+        },
+        "expected_obsids": [8,7,6,5,4,3]
+    }
 
 
 @pytest.fixture
