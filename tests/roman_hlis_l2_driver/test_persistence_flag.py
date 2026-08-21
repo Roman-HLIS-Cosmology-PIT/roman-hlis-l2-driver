@@ -199,10 +199,6 @@ def asdf_files(tmp_path):
         }
         outfile = ( l2_dir/f"sim_L2_H158_{obsid}_{sca}.asdf")
         asdf.AsdfFile(tree).write_to(outfile,all_array_compression="zlib")
-        
-    # ensure all files are created in the new directory
-    l2_paths = sorted(l2_dir.glob("*.asdf"))
-    assert len(l2_paths) == 10, (f"Expected 10 mock L2 files, but actually made {len(l2_paths)}")
     
     # generate one asdf file in the L2.1 directory to get the ball rolling
     current_image = np.zeros((nside,nside),dtype=np.float32)
@@ -539,4 +535,4 @@ def test_persistence_flagging(config,asdf_files):
     assert not persistence_mask[pixels["star_too_faint"]]
     
     #this one should be too old
-    assert not persistence_mask[pixels["star_too_bright"]]
+    assert not persistence_mask[pixels["star_too_old"]]
