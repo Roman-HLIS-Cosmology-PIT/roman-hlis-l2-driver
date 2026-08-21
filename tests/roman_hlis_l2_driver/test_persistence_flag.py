@@ -50,10 +50,6 @@ def inject_star(image,wcsobj,psf,ra,dec,flux,ov=1,nbdy=256,n=121):
     xc = int(np.round(x))
     yc = int(np.round(y))
 
-    nbdy2 = nbdy - n // 2
-    if xc < -nbdy2 or xc >= nside + nbdy2 or yc < -nbdy2 or yc >= nside + nbdy2:
-        continue  # skip if not in boundary
-
     psf_shifted = shift(psf, (ov * (x - xc), ov * (y - yc)), order=1, mode="constant")
     stamp = np.sum(psf_shifted.reshape((n, ov, n, ov)), axis=(1, 3) )
     #update the image object that was passed
