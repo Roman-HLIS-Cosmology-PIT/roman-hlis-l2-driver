@@ -202,7 +202,7 @@ def asdf_files(tmp_path):
         
     # ensure all files are created in the new directory
     l2_paths = sorted(l2_dir.glob("*.asdf"))
-    assert len(l2_paths) == 10, (f"Expected 10 mock L2 files, but actually made {len(le_pathhs)}")
+    assert len(l2_paths) == 10, (f"Expected 10 mock L2 files, but actually made {len(l2_paths)}")
     
     # generate one asdf file in the L2.1 directory to get the ball rolling
     current_image = np.zeros((nside,nside),dtype=np.float32)
