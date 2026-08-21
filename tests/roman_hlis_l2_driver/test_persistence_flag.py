@@ -306,7 +306,7 @@ def config(tmp_path,obsfile,asdf_files):
         "TEMPFILE": "/fs/scratch/PCON0003/cond0007/tmp/pyimcomrun_2X",
         "INLAYERCACHE": "/fs/scratch/PCON0003/cond0007/temp/cache2/r2",
         "PSFINTERP": "G4460",
-        "PSFSPLIT": [5.25, 8.75, 0.01, true],
+        "PSFSPLIT": [5.25, 8.75, 0.01, True],
         "DSMODEL": ["constant",
             4088],
         "DSOBSFILE": "/fs/scratch/PCON0003/cond0007/temp/fits-H/tempimage_",
