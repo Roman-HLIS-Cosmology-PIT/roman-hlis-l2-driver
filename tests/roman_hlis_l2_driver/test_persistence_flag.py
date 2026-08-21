@@ -70,7 +70,7 @@ def obsfile(tmp_path):
     cadence_sec = 180.0
     cadence_day = cadence_sec / 86400.0
     
-    dates = (62000.0 + np.arrange(n_obs,dtype=np.float64) * cadence_day)
+    dates = (62000.0 + np.arange(n_obs,dtype=np.float64) * cadence_day)
     columns = [
         fits.Column(
             name="date",
