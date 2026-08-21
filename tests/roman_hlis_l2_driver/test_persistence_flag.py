@@ -61,6 +61,62 @@ def inject_star(image,wcsobj,psf,ra,dec,flux,ov=1,nbdy=256,n=121):
 
 
 @pytest.fixture
+def obsfile(tmp_path):
+    """
+    """
+    obsfile = tmp_path/"Roman_WAS_obseq_test.fits"
+    n_obs = 10
+    exptime = 100.0
+    cadence_sec = 180.0
+    cadence_day = cadence_sec / 86400.0
+    
+    dates = (62000.0 + np.arrange(n_obs,dtype=np.float64) * cadence_day)
+    columns = [
+        fits.Column(
+            name="date",
+            format="D",
+            array=dates,
+        ),
+        fits.Column(
+            name="exptime",
+            format="D",
+            array=np.full(n_obs,exptime,dtype=np.float64),
+        ),
+        fits.Column(
+            name="ra",
+            format="D",
+            array=np.full(n_obs,9.55,dtype=np.float64),
+        ),
+        fits.Column(
+            name="dec",
+            format="D",
+            array=np.full(n_obs,-44.1,dtype=np.float64),
+        ),
+        fits.Column(
+            name="pa",
+            format="D",
+            array=np.full(n_obs,180,dtype=np.float64),
+        ),
+        fits.Column(
+            name="filter",
+            format="4A",
+            array=np.full(n_obs,"H158"),
+        ),
+    ]
+    
+    table_hdu = fits.BinTableHDU.from_columns(columns)
+    fits.HDUList(
+        [
+            fits.PrimaryHDU(),
+            table_hdu,
+        ]
+    ).writeto(
+        obsfile,
+        overwrite=True)
+    
+    return obsfile
+
+@pytest.fixture
 def asdf_files(tmp_path):
     """
     """
