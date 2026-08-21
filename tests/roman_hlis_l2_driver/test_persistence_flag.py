@@ -476,7 +476,7 @@ def test_persistence_flagging(config,asf_files):
     assert persistence_mask[pixels["star_3"]]
     
     #this one should be too faint
-    assert not persistence_mask[pixels["star_too_faint"]
+    assert not persistence_mask[pixels["star_too_faint"]]
     
     #this one should be too old
-    assert not persistence_mask[pixels["star_too_bright"]
+    assert not persistence_mask[pixels["star_too_bright"]]
