@@ -11,7 +11,7 @@ from astropy.io import fits
 from astropy.modeling import models
 from gwcs import coordinate_frames, wcs
 from psfsim.polychrom import PolychromaticPSF
-from roman_datamodels.dqflags import pixels
+from roman_datamodels.dqflags import pixel
 from scipy.ndimage import shift
 
 from roman_hlis_l2_driver.persistence.persistence_flag import previous_obsid, get_prev_obs
