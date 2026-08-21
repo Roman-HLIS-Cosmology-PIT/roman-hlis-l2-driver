@@ -460,7 +460,7 @@ def test_persistence_flagging(config,asf_files):
     mask_list = run(str(config))
     
     assert isinstnace(mask_list,list)
-    assert len(mask)list) == 1
+    assert len(mask_list) == 1
     
     persistence_mask, prev_obsids = mask_list[0]
     
