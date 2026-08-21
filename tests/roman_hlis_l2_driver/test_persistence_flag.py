@@ -225,7 +225,7 @@ def asdf_files(tmp_path):
             "current_path": current_path,
             "pixels": {
                 name: (int(round(y)),int(round(x)))
-                for name, (x,y) in detector_positions.items()
+                for name, (x,y) in detector_locations.items()
             },
             "expected_obsids": [8,7,6,5,4,3]
         }
