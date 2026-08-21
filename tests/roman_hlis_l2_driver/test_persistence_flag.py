@@ -150,7 +150,7 @@ def asdf_files(tmp_path):
 
     #define fluxes for candidate stars as well as too faint ones
     bright_flux = 1.0e4
-    faint_flix = 1.0e2
+    faint_flux = 1.0e2
 
     #generate the sources that will appear in the asdf file, assuming starting at OBSID 9
     # with the given exptime, this will make obsid 2 too old to be considered
