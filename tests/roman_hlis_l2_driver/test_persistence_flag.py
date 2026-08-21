@@ -232,7 +232,7 @@ def asdf_files(tmp_path):
 
 
 @pytest.fixture
-def config(tmp_path,obsfile,asd_files):
+def config(tmp_path,obsfile,asdf_files):
     """
     """
     l21_dir = asdf_files["l21_dir"]
@@ -504,7 +504,7 @@ def test_get_prev_obs_with_nbackup_passed(observation_table):
 # series of corresponding asdf images (can use the template of test_many_stars)
 # and re-use the same PSF over and over instead of re-drawing it for each sca
 # then,
-def test_persistence_flagging(config,asf_files):
+def test_persistence_flagging(config,asdf_files):
     """ Make sure persistence.run() returns a persistence mask and
     a list of the correct obsids used to build it, namely: (INSERT
     APPLICABLE OBSIDS)
