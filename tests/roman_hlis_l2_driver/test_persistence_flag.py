@@ -42,11 +42,11 @@ def make_wcs(ra=9.55, dec=-44.1, lonpole=180.0):
         ]
     )
 
-def inject_star(image,wcsobj,psf,ra,dec,flux,ov=1,nbdy=256,n=121):
+def inject_star(image,wcsobj,psf,ra,dec,flux,ov=1,n=121):
     """ Inject a star into a mock image
     """
     # where is this?
-    x, y = wcsobj.invert(ra_s, dec_s)
+    x, y = wcsobj.invert(ra, dec)
     xc = int(np.round(x))
     yc = int(np.round(y))
 
@@ -54,8 +54,8 @@ def inject_star(image,wcsobj,psf,ra,dec,flux,ov=1,nbdy=256,n=121):
     stamp = np.sum(psf_shifted.reshape((n, ov, n, ov)), axis=(1, 3) )
     #update the image object that was passed
     image[
-        yc + nbdy - n // 2 : yc + nbdy + n // 2 + 1, xc + nbdy - n // 2 : xc + nbdy + n // 2 + 1
-    ] += flux_s * stamp
+        yc - n // 2 : yc + n // 2 + 1, xc - n // 2 : xc + n // 2 + 1
+    ] += flux * stamp
     
     return yc, xc
 
@@ -200,6 +200,10 @@ def asdf_files(tmp_path):
         outfile = ( l2_dir/f"sim_L2_H158_{obsid}_{sca}.asdf")
         asdf.AsdfFile(tree).write_to(outfile,all_array_compression="zlib")
         
+    # ensure all files are created in the new directory
+    l2_paths = sorted(l2_dir.glob("*.asdf"))
+    assert len(l2_paths) == 10, (f"Expected 10 mock L2 files, but actually made {len(le_pathhs)}")
+    
     # generate one asdf file in the L2.1 directory to get the ball rolling
     current_image = np.zeros((nside,nside),dtype=np.float32)
     current_dq = np.zeros((nside,nside),dtype=np.uint32)
