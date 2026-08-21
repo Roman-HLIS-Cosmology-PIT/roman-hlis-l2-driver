@@ -9,7 +9,7 @@ import numpy as np
 from astropy import coordinates, units
 from astropy.io import fits
 from astropy.modeling import models
-from gwcs import coordinate_frame, wcs
+from gwcs import coordinate_frames, wcs
 from psfsim.polychrom import PolychromaticPSF
 from roman_datamodels.dqflags import pixels
 from scipy.ndimage import shift
