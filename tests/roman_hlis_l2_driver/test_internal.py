@@ -4,6 +4,7 @@ Test functions for internal object finding.
 
 import asdf
 import numpy as np
+import pytest
 from astropy import coordinates, units
 from astropy.modeling import models
 from gwcs import coordinate_frames, wcs
@@ -232,6 +233,14 @@ def test_mask_many(tmp_path):
         from astropy.io import fits
 
         fits.PrimaryHDU(image).writeto(f"{tmp_path}/obs_{obsid}_{sca}.fits")
+
+    # Error tests
+    with pytest.raises(ValueError):
+        brightobj_from_manyimg("None")
+    with pytest.raises(ValueError):
+        brightobj_from_manyimg("{d} {d}")
+    with pytest.raises(ValueError):
+        brightobj_from_manyimg("{:d}_{4:d}")
 
     # Now run the star finder
     stars_recovered, _ = brightobj_from_manyimg(tmp_path + "/obs_{0:d}_{1:d}.asdf")
