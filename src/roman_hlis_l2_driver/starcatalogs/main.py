@@ -40,9 +40,17 @@ def spikedata_to_mask(nside, x, y, sp_theta, sp_length, sp_width, wedge):
     sp_length = sp_length.astype(np.float32)
     sp_width = sp_width.astype(np.float32)
 
+    # get bounding boxes
+    hyp = np.amax(np.hypot(sp_length, sp_width))
+    xmin = max(int(np.floor(x - hyp)), 0)
+    xmax = min(int(np.floor(x + hyp + 1)), nside)
+    ymin = max(int(np.floor(y - hyp)), 0)
+    ymax = min(int(np.floor(y + hyp + 1)), nside)
+
     # set up coordinates
-    _s = np.array(range(nside)).astype(np.float32)
-    dx, dy = np.meshgrid(_s, _s)
+    _sx = np.array(range(xmin, xmax)).astype(np.float32)
+    _sy = np.array(range(ymin, ymax)).astype(np.float32)
+    dx, dy = np.meshgrid(_sx, _sy)
     dx -= x
     dy -= y
     slope = np.float32(np.tan(wedge))
@@ -50,7 +58,7 @@ def spikedata_to_mask(nside, x, y, sp_theta, sp_length, sp_width, wedge):
     for j in range(n):
         rotx = dx * np.cos(sp_theta[j]) + dy * np.sin(sp_theta[j])
         roty = np.abs(dy * np.cos(sp_theta[j]) - dx * np.sin(sp_theta[j]))
-        mask |= (
+        mask[ymin:ymax, xmin:xmax] |= (
             (rotx > 0)
             & (rotx < sp_length[j] + 0.5)
             & (roty < sp_width[j] + 0.5)
