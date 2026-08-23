@@ -205,7 +205,14 @@ def brightobj_from_scaimg(infile, obsid=-1, thresh=50.0, verbose=False):
                 np.logical_and(r >= np.pi / 4.0 * rcc[i], r <= np.pi / 2.0 * rcc[i]), np.logical_not(mask)
             )
         )
-        # I think it's impossible for this to be empty, since by construction there are pixels at radius r.
+        if len(ring[0]) == 0:
+            ring = np.where(
+                np.logical_and(
+                    np.logical_and(r > np.pi / 4.0 * rcc[i], r < np.pi / 2.0 * rcc[i]), map == i + 1
+                )
+            )
+        if len(ring[0]) == 0:
+            raise ValueError("Invalid mask.")
         eflux[i] = max(np.mean(img[ring]) / np.mean(fluxfrac[ring]), obj[i]["flux"])
     obj = rfn.append_fields(
         obj,
