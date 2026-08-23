@@ -1,6 +1,8 @@
 """Driver for masking bright star spikes."""
 
 
+import sys
+
 import asdf
 import numpy as np
 from pyimcom.wcsutil import PyIMCOM_WCS
@@ -198,6 +200,8 @@ def stardata_to_mask_manyfiles(l2files, catalog, thresh, dp=256.0, update=True):
 
     for j in range(nexp):
         mask[j, :, :] = stardata_to_mask_wcs(l2files[j], catalog, thresh, dp=dp)
+        print(f"{j}/{nexp}: {l2files[j]} {np.count_nonzero(mask[j,:,:])}")
+        sys.stdout.flush()
 
     if update:
         for j in range(nexp):
