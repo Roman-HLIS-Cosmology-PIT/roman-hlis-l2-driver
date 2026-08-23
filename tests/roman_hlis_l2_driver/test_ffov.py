@@ -423,4 +423,3 @@ def test_ffov(tmp_path):
             os.remove(tmp_path + f"/testimage{sca:02d}.asdf")
         if sca not in [1, 8, 11]:
             os.remove(tmp_path + f"/testmask{sca:02d}.fits")
-    os.remove(tmp_path + "/testffov.fits")
