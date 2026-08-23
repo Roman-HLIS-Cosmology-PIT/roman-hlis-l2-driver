@@ -96,7 +96,9 @@ def extract_data(spikedata, use_filter, sca, x, y, thresh):
     th = spikedata["thresh"]
     w = np.zeros(len(th))
     if thresh >= th[0]:
-        w[0] = 1.0
+        # this extrapolates beyond the PSFSim model grid with a 1/3 power law,
+        # which is appropriate for diffraction from a slightly curved edge.
+        w[0] = (th[0] / thresh) ** (1 / 3)
     elif thresh <= th[-1]:
         w[-1] = 1.0
     else:
