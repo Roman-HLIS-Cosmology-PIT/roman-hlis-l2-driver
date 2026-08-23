@@ -145,7 +145,12 @@ def test_integrated(tmp_path):
     # test moving files as if they are noise
     os.makedirs(tmp_path + "/asifnoise-F", exist_ok=True)
     destripe_setup.setup_all_files(
-        tmp_path + "/L2/sim_L2_F184", tmp_path + "/asifnoise-F/nf", noiseid=0, verbose=True
+        tmp_path + "/L2/sim_L2_F184",
+        tmp_path + "/asifnoise-F/nf",
+        max_files=1,
+        noiseid=0,
+        verbose=True,
+        tracktest=True,
     )
     with asdf.open(tmp_path + "/L2/sim_L2_F184_1433_11.asdf") as a1:
         block = np.copy(a1["roman"]["data"][:16, :16])
@@ -154,13 +159,7 @@ def test_integrated(tmp_path):
     with fits.open(tmp_path + "/asifnoise-F/nf_1433_11.fits") as f:
         assert np.allclose(f[0].data[:16, :16], block, atol=1e-5, rtol=1e-5)
     # now clear old files (this part also asserts that they exist!)
-    delfiles = [
-        "asifnoise-F/nf_14844_6.fits",
-        "asifnoise-F/nf_1433_11.fits",
-        "asifnoise-F/nf_1433_12.fits",
-    ]
-    for df in delfiles:
-        os.remove(tmp_path + "/" + df)
+    os.remove(tmp_path + "/asifnoise-F/nf_1433_11.fits")
 
     # make directories for imdestripe
     os.makedirs(tmp_path + "/ds-F", exist_ok=True)
