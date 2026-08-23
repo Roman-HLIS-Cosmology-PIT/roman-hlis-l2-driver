@@ -13,7 +13,7 @@ import sep
 from roman_datamodels.dqflags import pixel
 
 
-def encirc_center(arr):
+def encirc_center(arr, max_nside=16384):
     """
     Finds the center and radius of the smallest circle enclosing the "True" values in an array.
 
@@ -21,6 +21,8 @@ def encirc_center(arr):
     ----------
     arr : np.ndarray of bool or bool-like
         The input array. Must be 2 dimensional.
+    max_nside : int, optional
+        The maximum number of sides of the circumscribing polygon to consider.
 
     Returns
     -------
@@ -72,7 +74,7 @@ def encirc_center(arr):
         searchdir = (dy // g, dx // g)
         if xp[0] == xp[-1] and yp[0] == yp[-1]:
             closed = True
-        if len(xp) == 16384:
+        if len(xp) >= max_nside:
             raise ValueError("Polygon convergence failed.")
     npts = len(xp) - 1  # number of points in the cicrumscribing polygon
 
@@ -200,25 +202,10 @@ def brightobj_from_scaimg(infile, obsid=-1, thresh=50.0, verbose=False):
         fluxfrac = 1.0 / (2 * np.pi * alpha) * (1.0 + r**2 / alpha**2) ** (-1.5)
         ring = np.where(
             np.logical_and(
-                np.logical_and(r > np.pi / 4.0 * rcc[i], r < np.pi / 2.0 * rcc[i]), np.logical_not(mask)
+                np.logical_and(r >= np.pi / 4.0 * rcc[i], r <= np.pi / 2.0 * rcc[i]), np.logical_not(mask)
             )
         )
-        if len(ring[0]) == 0:
-            ring = np.where(
-                np.logical_and(
-                    np.logical_and(r > np.pi / 4.0 * rcc[i], r < np.pi / 2.0 * rcc[i]), map == i + 1
-                )
-            )
-        if len(ring[0]) == 0:
-            # This isn't supposed to happen.
-            # print("ERROR")
-            # print(map[oi["ymin"] : oi["ymax"] + 1, oi["xmin"] : oi["xmax"] + 1] == i + 1)
-            # print("x range", oi["xmin"], oi["xmax"], "y range", oi["ymin"], oi["ymax"])
-            # print((xcc[i], ycc[i]), "r =", rcc[i])
-            # print("Mask:")
-            # print(mask[oi["ymin"] : oi["ymax"] + 1, oi["xmin"] : oi["xmax"] + 1])
-            # print("---")
-            raise ValueError("Invalid mask.")
+        # I think it's impossible for this to be empty, since by construction there are pixels at radius r.
         eflux[i] = max(np.mean(img[ring]) / np.mean(fluxfrac[ring]), obj[i]["flux"])
     obj = rfn.append_fields(
         obj,

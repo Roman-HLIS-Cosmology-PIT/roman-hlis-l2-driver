@@ -119,6 +119,11 @@ def test_encirc_center():
     assert abs(y - 3.3181818181818183) < 1e-6
     assert abs(r - 3.3184931360807237) < 1e-6
 
+    # Error
+    with pytest.raises(ValueError):
+        x, y, r = encirc_center(use, max_nside=2)
+        print(x, y, r)
+
 
 def test_mask_many(tmp_path):
     """Test star mask functions for many images."""
