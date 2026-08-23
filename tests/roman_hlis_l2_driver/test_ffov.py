@@ -410,12 +410,12 @@ def test_ffov(tmp_path):
         a.update()
     with asdf.open(tmp_path + "/testimage05.asdf") as a:
         assert "medgain" not in a["processinfo"]
-    os.remove(tmp_path + "/testffov.fits")
     with pytest.warns(UserWarning, match="Couldn't find median gain, switching to default value."):
         FullFoVImage(
             tmp_path + r"/testimage{:02d}.asdf",
             maskfile=tmp_path + r"/testmask{:02d}.fits",
         ).to_file(tmp_path + "/testffov.fits")
+    os.remove(tmp_path + "/testffov.fits")
 
     # Remove old files
     for sca in range(1, 19):
