@@ -309,8 +309,8 @@ def test_ffov(tmp_path):
             }
         ).write_to(tmp_path + f"/testimage{sca:02d}.asdf")
 
-        if sca != 8:
-            # Make a mask file except for SCA 8
+        if sca not in [1, 8]:
+            # Make a mask file except for SCA 1 & 8
             mask = np.zeros((4088, 4088), dtype=np.int16)
             if sca > 10:
                 mask[3000:3050, :2044] = -1000
@@ -351,13 +351,13 @@ def test_ffov(tmp_path):
             assert h["NAXIS"] == 2
             assert h["NAXIS1"] == 4088
             assert h["NAXIS2"] == 4088
-            assert h["MJD"] == 62106.1666666667
-            assert h["FILTER"] == "F184"
             assert h["EXTNAME"] == f"WFI{sca:02d}"
             if h["ISVALID"]:
+                assert h["FILTER"] == "F184"
+                assert np.abs(h["MJD"] - 62106.1666666667) < 1.0e-6
                 assert 0.45 < h["EQVGAIN"] < 0.46
             else:
-                assert sca in [8, 11]  # must be one of the ones we "broke"
+                assert sca in [1, 8, 11]  # must be one of the ones we "broke"
 
         # choose SCA 16 for WCS tests
         sca16wcs = wcs.WCS(f[16].header)
@@ -383,6 +383,7 @@ def test_ffov(tmp_path):
 
     # Similar but check that FullFoVImageFromFile works
     ff = FullFoVImageFromFile(tmp_path + "/testffov.fits")
+    valid = np.zeros((18,), dtype=bool)
     for sca in range(1, 19):
         if sca != 11:
             d = ff.hdulist[sca].data
@@ -392,6 +393,16 @@ def test_ffov(tmp_path):
                     assert 1170 <= x <= 1200
                 else:
                     assert x == 1
+        valid[sca - 1] = ff.hdulist[sca].header["ISVALID"]
+    os.remove(tmp_path + "/testffov.fits")
+
+    # Now try again
+    valid_target = np.ones((18,), dtype=bool)
+    valid_target[11 - 1] = False
+    valid_target[8 - 1] = False
+    valid_target[1 - 1] = False
+    print(valid)
+    assert np.all(valid == valid_target)
 
     # now remove the gain information and check this runs
     with asdf.open(tmp_path + "/testimage05.asdf", mode="rw") as a:
@@ -410,6 +421,6 @@ def test_ffov(tmp_path):
     for sca in range(1, 19):
         if sca != 11:
             os.remove(tmp_path + f"/testimage{sca:02d}.asdf")
-        if sca not in [8, 11]:
+        if sca not in [1, 8, 11]:
             os.remove(tmp_path + f"/testmask{sca:02d}.fits")
     os.remove(tmp_path + "/testffov.fits")
