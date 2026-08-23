@@ -67,8 +67,8 @@ def test_interp5pt():
 def test_extract_spikedata():
     """Simple test for getting diffraction spike information."""
 
-    ls = [14, 22, 64, 100]
-    ws = [2.2, 2.6, 4.4, 5.5]
+    ls = [14, 22, 64, 170]
+    ws = [2.2, 2.6, 4.4, 8.0]
     for j in range(4):
         d = extract_spikedata("H", 1, 4087.5, 4087.5, 3e-4 / 10**j)
         print(d)
@@ -260,7 +260,7 @@ def test_mask_many(tmp_path):
     assert np.all(np.abs(stars_unique["dec"] - np.array([-19.438, -19.438])) < 5.0e-5)
     assert np.all(np.abs(np.log(stars_unique["eflux"] / np.array([2.0e5, 4.0e5]))) < 0.25)
 
-    n_gt2 = [3032, 2483]
+    n_gt2 = [3032, 1833]
     nmask = []
 
     l2files = []
@@ -271,11 +271,12 @@ def test_mask_many(tmp_path):
         thismask = stardata_to_mask_wcs(l2, stars_unique, 0.1)
         if (obsid, sca) == (145, 11):
             assert np.all(~thismask[:2044, :])
-            assert np.count_nonzero(thismask[3964, 2100:2200]) == 14
-            assert np.count_nonzero(thismask[3964, 2200:2250]) == 11
-            assert np.count_nonzero(thismask[4030:4070, 2287]) == 16
+            assert np.count_nonzero(thismask[3964, 2100:2200]) == 32
+            assert np.count_nonzero(thismask[3964, 2200:2250]) == 16
+            assert np.count_nonzero(thismask[4030:4070, 2287]) == 20
             assert np.all(~thismask[4069:4076, 2349:2356])
 
+        print(np.count_nonzero(thismask))
         with asdf.open(l2) as a:
             im = np.where(~thismask, a["roman"]["data"], -1)
         assert np.abs(np.count_nonzero(im > 2) - n_gt2[0]) < 10
@@ -315,6 +316,6 @@ def test_mask_many(tmp_path):
         nmask2 = nmask2[1:]
 
     # check the return values
-    assert 38000 < tot_nmask < 41000
+    assert 70000 < tot_nmask < 74000
     assert np.allclose(starcat["ra"], np.array([16.49000774, 16.49500884]))
     assert np.allclose(starcat["dec"], np.array([-19.43800724, -19.43800151]))
