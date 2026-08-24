@@ -31,7 +31,7 @@ def run(cfg: str, l2dir=None, delta_t_prime_max=1200.0, signal_threshold=20000.0
         to be considered capable of causing persistence.
     nmax : int
         Maximum number of steps allowed to take back from L2.1 obsid.
-        
+
     Returns
     -------
     mask_list : list
@@ -134,14 +134,13 @@ def run(cfg: str, l2dir=None, delta_t_prime_max=1200.0, signal_threshold=20000.0
                 print("Persistence lookback window reached.")
                 break
             if nmax_counter > nmax:
-                warnings.warn(f"nmax counter exceeding, exiting early.")
+                warnings.warn("Default nmax counter exceeding, exiting early.")
                 break
             prev_ids.append(prev_id)
 
             # Find matching L2 file using OBSID only
             if prev_id not in l2_files:
                 print(f"No L2 file found for OBSID {prev_id}")
-
                 # Keep walking backward anyway
                 search_obsid = prev_id
                 continue
@@ -185,6 +184,6 @@ def run(cfg: str, l2dir=None, delta_t_prime_max=1200.0, signal_threshold=20000.0
         print(f"Total pixels in cumulative persistence mask: {np.count_nonzero(persistence_mask)}")
 
         # Actually put our result into mask_list
-        mask_list.append((persistence_mask, prev_ids, obsid))
+        mask_list.append((persistence_mask, prev_ids, current_obsid))
 
     return mask_list
