@@ -178,9 +178,10 @@ def brightobj_from_scaimg(infile, obsid=-1, thresh=50.0, verbose=False):
 
     wl = float(element[-3:]) / 100.0  # wavelength in microns
     ldp = wl * 0.79  # lambda/D in pixels
-    alpha = ldp * 2.0 / np.pi / (1 - 0.31)  # 0.31 = obscuration
+    alpha = ldp * 2.0 / np.pi**2 / (1 - 0.31)  # 0.31 = obscuration
     # this is an effective Moffat width for beta=3/2
-    # that gets the right diffraction ring settings
+    # that gets the right diffraction ring amplitude:
+    # fraction of energy in far wings ~ alpha / [min radius in pixels]
     if verbose:
         print("alpha =", alpha, "pixels")
 
@@ -199,7 +200,7 @@ def brightobj_from_scaimg(infile, obsid=-1, thresh=50.0, verbose=False):
         xcc[i] = x_ + oi["xmin"]
         ycc[i] = y_ + oi["ymin"]
         r = np.hypot(xi - xcc[i], yi - ycc[i])
-        fluxfrac = 1.0 / (2 * np.pi * alpha) * (1.0 + r**2 / alpha**2) ** (-1.5)
+        fluxfrac = 1.0 / (2 * np.pi * alpha**2) * (1.0 + r**2 / alpha**2) ** (-1.5)
         ring = np.where(
             np.logical_and(
                 np.logical_and(r >= np.pi / 4.0 * rcc[i], r <= np.pi / 2.0 * rcc[i]), np.logical_not(mask)
