@@ -12,7 +12,7 @@ from gwcs import coordinate_frames, wcs
 from psfsim.polychrom import PolychromaticPSF
 from roman_datamodels.dqflags import pixel
 from roman_hlis_l2_driver.persistence.persistence import run
-from roman_hlis_l2_driver.persistence.persistence_flag import get_prev_obs, previous_obsid
+from roman_hlis_l2_driver.persistence.persistence_flag import get_obs_date, get_prev_obs, previous_obsid
 from scipy.ndimage import shift
 
 
@@ -438,8 +438,7 @@ def test_passing_no_search_argument_returns_none(observation_table):
 
 
 def test_get_prev_obs_returns_noid(observation_table):
-    """Checks that an error is raised if no id is passed.
-    """
+    """Checks that an error is raised if no id is passed."""
 
     with pytest.raises(ValueError):
         get_prev_obs(str(observation_table))
@@ -463,6 +462,12 @@ def test_get_prev_obs_nbackup_not_supplied(observation_table):
     result1, result2 = get_prev_obs(str(observation_table), id=2)
 
     assert result1 == 0 and np.abs(result2 - 0.01) < 1.0e-5
+
+
+def test_get_obs_date(observation_table):
+    """Tests that we can get an observation date."""
+
+    assert np.abs(get_obs_date(str(observation_table), id=2) - 62000.04000) < 1.0e-4
 
 
 def test_get_prev_obs_with_nbackup_passed(observation_table):
