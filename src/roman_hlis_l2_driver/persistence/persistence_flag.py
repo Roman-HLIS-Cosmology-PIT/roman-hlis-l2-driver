@@ -80,7 +80,7 @@ def get_prev_obs(obstable: str, nbackup=1, id=None):
     if id is None:
         raise ValueError("Please enter an id")
 
-    with f.open(inputfile) as in_file:
+    with f.open(obstable) as in_file:
         all_obs = in_file[1].data["date"]
 
     current_obs = all_obs[id]
@@ -109,7 +109,7 @@ def get_obs_date(obstable: str, id=None):
     obs_date: float
         Date of the requested obs, in modified Julian date.
     """
-    with f.open(inputfile) as in_file:
+    with f.open(obstable) as in_file:
         all_obs = in_file[1].data["date"]
 
     obs_date = all_obs[id]
