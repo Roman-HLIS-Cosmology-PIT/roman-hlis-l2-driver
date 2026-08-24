@@ -31,9 +31,8 @@ def previous_obsid(inputfile: str, row_number=None, obsid=None):
         - ``prev_row`` : Row number of the observation previous to the row_number passed,
                 were the rows sorted by date.
     """
-
-    in_file = f.open(inputfile)
-    all_obs = in_file[1].data["date"]
+    with f.open(inputfile) as in_file:
+        all_obs = in_file[1].data["date"]
 
     if row_number is not None and obsid is not None:
         raise ValueError("Please pick EITHER an obsid or a row_number to search by, not both")
@@ -81,8 +80,8 @@ def get_prev_obs(obstable: str, nbackup=1, id=None):
     if id is None:
         raise ValueError("Please enter an id")
 
-    in_file = f.open(obstable)
-    all_obs = in_file[1].data["date"]
+    with f.open(inputfile) as in_file:
+        all_obs = in_file[1].data["date"]
 
     current_obs = all_obs[id]
     delta_t = None
@@ -110,8 +109,8 @@ def get_obs_date(obstable: str, id=None):
     obs_date: float
         Date of the requested obs, in modified Julian date.
     """
-    in_file = f.open(obstable)
-    all_obs = in_file[1].data["date"]
+    with f.open(inputfile) as in_file:
+        all_obs = in_file[1].data["date"]
 
     obs_date = all_obs[id]
     return obs_date
