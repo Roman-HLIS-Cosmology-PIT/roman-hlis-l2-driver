@@ -437,6 +437,14 @@ def test_passing_no_search_argument_returns_none(observation_table):
     assert result is None
 
 
+def test_get_prev_obs_returns_noid(observation_table):
+    """Checks that an error is raised if no id is passed.
+    """
+
+    with pytest.raises(ValueError):
+        get_prev_obs(str(observation_table))
+
+
 def test_get_prev_obs_returns_none_when_no_previous_exists(observation_table):
     """Checks that Nones are passed if the observation_table does
     not contain an id previous to the one passed.
