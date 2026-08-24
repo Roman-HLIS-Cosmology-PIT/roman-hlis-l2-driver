@@ -6,7 +6,7 @@ from astropy.io import fits as f
 
 
 def previous_obsid(inputfile: str, row_number=None, obsid=None):
-    """ Given an observation ID (or a row number) and a path to a FITS file,
+    """Given an observation ID (or a row number) and a path to a FITS file,
     returns the ID (or row number) of the observation that came before it
     in the file.
 
@@ -93,7 +93,7 @@ def get_prev_obs(obstable: str, nbackup=1, id=None):
     if prev_id is not None:
         prev_obs = all_obs[prev_id]
         delta_t = current_obs - prev_obs
-        
+
     return prev_id, delta_t
 
 

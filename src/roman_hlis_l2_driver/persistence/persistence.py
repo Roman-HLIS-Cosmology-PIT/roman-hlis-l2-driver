@@ -1,19 +1,19 @@
 # persistence flagging driver script
 
-import re
 import json
+import re
 import warnings
+from pathlib import Path
 
 import asdf as a
 import numpy as np
-from pathlib import Path
 from astropy.io import fits as f
 from erfa import ErfaWarning
 
 from . import persistence_flag as pf
 
 
-def run(cfg: str,l2dir=None,delta_t_prime_max=1200.0,signal_threshold=20000.0):
+def run(cfg: str, l2dir=None, delta_t_prime_max=1200.0, signal_threshold=20000.0):
     """
     Search previous L2 observations for pixels that may produce
     persistence in the current L2.1 observation.
@@ -57,14 +57,12 @@ def run(cfg: str,l2dir=None,delta_t_prime_max=1200.0,signal_threshold=20000.0):
     print(f"INDATA: {file_directory}")
 
     # L2 directory containing previous observations
-    l2_directory = (Path(cfg_file["INDATA"][0][:-3] + "/")
-        if l2dir is None else Path(l2dir))
+    l2_directory = Path(cfg_file["INDATA"][0][:-3] + "/") if l2dir is None else Path(l2dir)
 
     print(f"L2 directory: {l2_directory}")
 
     # File-name pattern
     search_pattern = re.compile(r"_(\d+)_(\d+)\.asdf$")
-
 
     l2_files = {}
     for l2_file in l2_directory.iterdir():
@@ -83,7 +81,6 @@ def run(cfg: str,l2dir=None,delta_t_prime_max=1200.0,signal_threshold=20000.0):
 
     # loop over L2.1 files
     for infile in file_directory.iterdir():
-
         matches = search_pattern.search(infile.name)
         if matches is None:
             continue
@@ -106,7 +103,7 @@ def run(cfg: str,l2dir=None,delta_t_prime_max=1200.0,signal_threshold=20000.0):
         while True:
             print(f"Searching for observation before OBSID {search_obsid}")
 
-            result = pf.get_prev_obs(obs_file_path,id=search_obsid)
+            result = pf.get_prev_obs(obs_file_path, id=search_obsid)
 
             # Reached beginning / no previous observation
             if result is None:
@@ -127,19 +124,17 @@ def run(cfg: str,l2dir=None,delta_t_prime_max=1200.0,signal_threshold=20000.0):
             print(f"Previous OBSID: {prev_id}, Step delta_t: {delta_t_seconds:.3f} sec")
             print(f"Exposure time: {exptime:.3f} sec, delta_t_prime: {delta_t_prime:.3f} sec")
             print(f"Total delta_t: {total_delta_t:.3f} sec")
-            
+
             # Persistence time-window test
             if delta_t_prime > delta_t_prime_max:
-
                 print(f"delta_t_prime = {delta_t_prime:.3f} sec > {delta_t_prime_max:.3f} sec")
                 print("Persistence lookback window reached.")
                 break
 
             prev_ids.append(prev_id)
-            
+
             # Find matching L2 file using OBSID only
             if prev_id not in l2_files:
-
                 print(f"No L2 file found for OBSID {prev_id}")
 
                 # Keep walking backward anyway
@@ -151,17 +146,17 @@ def run(cfg: str,l2dir=None,delta_t_prime_max=1200.0,signal_threshold=20000.0):
 
             # Read previous observation
             with warnings.catch_warnings():
-                warnings.filterwarnings("ignore",
-                    message=r'ERFA function "dtf2d".*dubious year.*',
-                    category=ErfaWarning)
+                warnings.filterwarnings(
+                    "ignore", message=r'ERFA function "dtf2d".*dubious year.*', category=ErfaWarning
+                )
                 with a.open(l2_file) as current_file:
                     data_array = np.asarray(current_file["roman"]["data"])
 
             # L2 data are DN / second
             signal_dn = data_array * exptime
-            
+
             # Pixels capable of causing persistence
-            previous_mask = (signal_dn >= signal_threshold)
+            previous_mask = signal_dn >= signal_threshold
 
             n_persistence_pixels = np.count_nonzero(previous_mask)
 
@@ -169,17 +164,17 @@ def run(cfg: str,l2dir=None,delta_t_prime_max=1200.0,signal_threshold=20000.0):
 
             # Add to cumulative persistence mask
             if persistence_mask is None:
-                persistence_mask = np.zeros_like(previous_mask,dtype=bool)
+                persistence_mask = np.zeros_like(previous_mask, dtype=bool)
 
             persistence_mask |= previous_mask
-            
+
             # Move backward another observation
             search_obsid = prev_id
 
         if persistence_mask is None:
             print("No qualifying previous observations found.")
 
-            persistence_mask = np.zeros((4088, 4088),dtype=bool)
+            persistence_mask = np.zeros((4088, 4088), dtype=bool)
 
         print(f"Previous observations searched: {prev_ids}")
         print(f"Total pixels in cumulative persistence mask: {np.count_nonzero(persistence_mask)}")
