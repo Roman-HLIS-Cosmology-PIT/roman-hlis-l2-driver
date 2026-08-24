@@ -211,6 +211,7 @@ def stardata_to_mask_manyfiles(l2files, catalog, thresh, dp=256.0, update=True):
                 a["mask"] &= ~np.uint8(0x8)
                 a["mask"] |= mask[j].astype(np.uint8) << 3
                 a["processinfo"]["spike_complete"] = True
+                a["processinfo"]["spike_pars"] = {"thresh": thresh, "dp": dp}
                 a.update()
 
     return mask
