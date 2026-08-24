@@ -477,7 +477,7 @@ def test_persistence_flagging(config, asdf_files):
     assert isinstance(mask_list, list)
     assert len(mask_list) == 1
 
-    persistence_mask, prev_obsids = mask_list[0]
+    persistence_mask, prev_obsids, current_obsid = mask_list[0]
 
     assert isinstance(persistence_mask, np.ndarray)
     assert persistence_mask.shape == (4088, 4088)
