@@ -63,7 +63,10 @@ for ifilt in range(nf)[::-1]:
                 method="linear",
             )(np.vstack((_y.ravel(), _x.ravel())).T).reshape(np.shape(_r))
 
-            binpsf = np.sum(polarpsf[:, ov * 16 :], axis=1)
+            binpsf = np.sum(polarpsf[:, ov * 16 :], axis=1)  # exclude 16 pix radius central region
+            # select local maxima in angle, avoiding features near the multiples of 30 degrees
+            # (these can fool the sum-based diffraction spike finder even though the spikes don't
+            # go out very far)
             peaks = np.where(
                 np.logical_and(
                     np.logical_and(
@@ -74,6 +77,8 @@ for ifilt in range(nf)[::-1]:
                 )
             )[0]
 
+            # these handle a few edge cases where the above finder misses a spike, or where
+            # discretization in the interpolator gives 2 adjacent maxima as a function of angle
             if len(peaks) < 12:
                 peaks = np.where(
                     np.logical_and(
