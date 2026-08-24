@@ -19,7 +19,7 @@ from roman_hlis_l2_driver.persistence.persistence import run
 
 
 def make_wcs(ra=9.55, dec=-44.1, lonpole=180.0):
-    """ Creates a GWCS for mock asdf files.
+    """ Creates a GWCS object for generating stars in mock asdf files.
     """
     shiftscale = (models.Shift(-2043.5) | models.Scale(0.11/3600.0))
     det2sky = ( ((shiftscale | models.Scale(-1)) & shiftscale)
@@ -62,7 +62,7 @@ def inject_star(image,wcsobj,psf,ra,dec,flux,ov=1,n=121):
 
 @pytest.fixture
 def obsfile(tmp_path):
-    """
+    """ Create a mock observation table fits file.
     """
     obsfile = tmp_path/"Roman_WAS_obseq_test.fits"
     n_obs = 10
@@ -118,7 +118,7 @@ def obsfile(tmp_path):
 
 @pytest.fixture
 def asdf_files(tmp_path):
-    """
+    """ Create mock asdf files for testing persistence flagging.
     """
     nside = 4088
     sca = 17
@@ -237,7 +237,7 @@ def asdf_files(tmp_path):
 
 @pytest.fixture
 def config(tmp_path,obsfile,asdf_files):
-    """
+    """ Creates a mock configuration json file similar to those in production.
     """
     l21_dir = asdf_files["l21_dir"]
     l21_path = f"{l21_dir}/"
@@ -335,9 +335,8 @@ def config(tmp_path,obsfile,asdf_files):
 
 @pytest.fixture
 def observation_table(tmp_path):
-    """
-    Create a temporary FITS table whose observations are deliberately
-    not stored in chronological order.
+    """ Create a temporary FITS table whose observations
+    are deliberately not stored in chronological order.
 
     Sort Order   Python index    DATE
     ----------   ------------    -----------
@@ -348,7 +347,8 @@ def observation_table(tmp_path):
     Chronological order:
         row 1 -> row 3 -> row 0 -> row 2
     """
-    dates = np.array([62000.03000, 62000.01000, 62000.04000, 62000.02000], dtype=np.float64)
+    dates = np.array([62000.03000, 62000.01000,
+                      62000.04000, 62000.02000], dtype=np.float64)
 
     date_column = fits.Column(
         name="date",
@@ -366,7 +366,7 @@ def observation_table(tmp_path):
 
 
 def test_previous_obsid_exact_match(observation_table):
-    """An exact OBSID match should return the next-lowest OBSID."""
+    """ An exact OBSID match should return the next-lowest OBSID."""
     result = previous_obsid(
         str(observation_table),
         obsid=62000.03000,
@@ -376,8 +376,7 @@ def test_previous_obsid_exact_match(observation_table):
 
 
 def test_previous_obsid_between_observations(observation_table):
-    """
-    An OBSID between two recorded observations should return the
+    """ An OBSID between two recorded observations should return the
     largest recorded OBSID below it.
     """
     result = previous_obsid(
@@ -409,7 +408,7 @@ def test_previous_obsid_returns_none_when_no_previous_exists(
     observation_table,
     obsid,
 ):
-    """Checks that None is passed if the observation_table does
+    """ Checks that None is passed if the observation_table does
     not contain an obsid previous to the one passed.
     """
     result = previous_obsid(
@@ -436,8 +435,7 @@ def test_previous_row_number(observation_table):
 
 
 def test_first_chronological_row_has_no_previous_row(observation_table):
-    """
-    FITS row 1 contains the earliest observation, so it has no
+    """ FITS row 1 contains the earliest observation, so it has no
     chronologically previous observation.
     """
     result = previous_obsid(
@@ -451,7 +449,7 @@ def test_first_chronological_row_has_no_previous_row(observation_table):
 def test_passing_both_search_arguments_prints_warning(
     observation_table,
 ):
-    """Checks that ValueError is raised if we provide both arguments."""
+    """ Checks that ValueError is raised if we provide both arguments."""
     with pytest.raises(ValueError):
         previous_obsid(
             str(observation_table),
@@ -461,7 +459,7 @@ def test_passing_both_search_arguments_prints_warning(
 
 
 def test_passing_no_search_argument_returns_none(observation_table):
-    """Checks to make sure None is passed when neither
+    """ Checks to make sure None is passed when neither
     row_number or obsid is passed
     """
     result = previous_obsid(str(observation_table))
@@ -470,7 +468,7 @@ def test_passing_no_search_argument_returns_none(observation_table):
 
 
 def test_get_prev_obs_returns_none_when_no_previous_exists(observation_table):
-    """Checks that Nones are passed if the observation_table does
+    """ Checks that Nones are passed if the observation_table does
     not contain an id previous to the one passed.
     """
     result1, result2 = get_prev_obs(str(observation_table),id=1)
@@ -479,8 +477,7 @@ def test_get_prev_obs_returns_none_when_no_previous_exists(observation_table):
 
 
 def test_get_prev_obs_nbackup_not_supplied(observation_table):
-    """
-    As passed, row_number = 2 corresponds to DATE=62000.04000.
+    """ As passed, row_number = 2 corresponds to DATE=62000.04000.
 
     The previous chronological observation is DATE=62000.03000,
     which is located in FITS row 0, and their difference is 0.01.
@@ -491,8 +488,7 @@ def test_get_prev_obs_nbackup_not_supplied(observation_table):
 
 
 def test_get_prev_obs_with_nbackup_passed(observation_table):
-    """
-    As passed, row_number = 0 corresponds to DATE=62000.03000.
+    """ As passed, row_number = 0 corresponds to DATE=62000.03000.
 
     The observation that is (n=2) before is DATE=62000.01000,
     which is located in FITS row 1, and their difference is 0.02.
@@ -502,16 +498,9 @@ def test_get_prev_obs_with_nbackup_passed(observation_table):
     assert result1 == 1 and np.abs(result2 - 0.02) < 1.0e-5
 
 
-#make a pytest.fixture here for: writing a config json, 
-# make a sample observation table fits,
-# (can use OU24 tables for formatting), and make a
-# series of corresponding asdf images (can use the template of test_many_stars)
-# and re-use the same PSF over and over instead of re-drawing it for each sca
-# then,
 def test_persistence_flagging(config,asdf_files):
     """ Make sure persistence.run() returns a persistence mask and
-    a list of the correct obsids used to build it, namely: (INSERT
-    APPLICABLE OBSIDS)
+    a list of the correct obsids used to build it, namely: [8,7,6,5,4,3]
     """
     mask_list = run(str(config))
     
