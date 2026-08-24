@@ -112,12 +112,12 @@ def obsfile(tmp_path):
     return obsfile
 
 
-def make_l21_asdf(l21_dir, obsid, sca, wcsobj, nside = 4088):
-    """ Creates a generic L2.1 ASDF file."""
+def make_l21_asdf(l21_dir, obsid, sca, wcsobj, nside=4088):
+    """Creates a generic L2.1 ASDF file."""
     image = np.zeros((nside, nside), dtype=np.float32)
     dq = np.zeros((nside, nside), dtype=np.uint32)
     es = np.full((nside, nside), -1, dtype=np.int8)
-    
+
     tree = {
         "processinfo": {
             "endslice": es,
@@ -134,13 +134,13 @@ def make_l21_asdf(l21_dir, obsid, sca, wcsobj, nside = 4088):
             "dq": dq,
         },
     }
-    
-    path =l21_dir/f"sim_L2_1_H158_{obsid}_{sca}.asdf"
+
+    path = l21_dir / f"sim_L2_1_H158_{obsid}_{sca}.asdf"
     asdf.AsdfFile(tree).write_to(
         path,
         all_array_compression="zlib",
     )
-    
+
     return path
 
 
@@ -231,7 +231,7 @@ def asdf_files(tmp_path):
 
     # generate one asdf file in the L2.1 directory to get the ball rolling
     current_path = make_l21_asdf(
-        l21_dir = l21_dir,
+        l21_dir=l21_dir,
         obsid=9,
         sca=sca,
         wcsobj=wcsobj,
@@ -239,7 +239,7 @@ def asdf_files(tmp_path):
     )
 
     no_prev_path = make_l21_asdf(
-        l21_dir = l21_dir,
+        l21_dir=l21_dir,
         obsid=0,
         sca=sca,
         wcsobj=wcsobj,
@@ -333,7 +333,7 @@ def config(tmp_path, obsfile, asdf_files):
 
 @pytest.fixture
 def empty_l21_dir(tmp_path):
-    """ Create an L2.1 directory with no applicable ASDF files."""
+    """Create an L2.1 directory with no applicable ASDF files."""
     empty_dir = tmp_path / "L2_1_empty"
     empty_dir.mkdir()
 
@@ -551,25 +551,27 @@ def test_persistence_flagging(config, asdf_files):
     # this one should be too old
     assert not persistence_mask[pixels["star_too_old"]]
 
+
 def test_persistence_flagging_finds_no_prev_in_l2(config, asdf_files):
-    """ Checks whether an L2.1 observation with no previous obsid in L2 is skipped."""
+    """Checks whether an L2.1 observation with no previous obsid in L2 is skipped."""
     mask_list = run(str(config))
     current_obsids = [result[2] for result in mask_list]
-    
+
     assert 0 not in current_obsids
     assert 9 in current_obsids
 
+
 def test_no_matching_l21_files(config, empty_l21_dir, tmp_path):
-    """ Checks whether sending run() a L2.1 with no
+    """Checks whether sending run() a L2.1 with no
     applicable L2.1 files returns nothing.
     """
-    with config.open("r", encoding = "utf-8") as config_file:
+    with config.open("r", encoding="utf-8") as config_file:
         test_config = json.load(config_file)
 
-    test_config["INDATA"][0] =f"{empty_l21_dir}/"
+    test_config["INDATA"][0] = f"{empty_l21_dir}/"
     empty_config_path = tmp_path / "emppty_l21_config.json"
 
-    with empty_config_path.open("w", encoding = "utf-8") as config_file:
+    with empty_config_path.open("w", encoding="utf-8") as config_file:
         json.dump(test_config, config_file, indent=4)
 
     mask_list = run(str(empty_config_path))
