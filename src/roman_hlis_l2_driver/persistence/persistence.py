@@ -81,7 +81,7 @@ def run(cfg: str, l2dir=None, delta_t_prime_max=1200.0, signal_threshold=20000.0
     mask_list = []
 
     # loop over L2.1 files
-    for infile in file_directory.iterdir():
+    for infile in file_directory.iterdir().sort:
         matches = search_pattern.search(infile.name)
         if matches is None:
             continue
