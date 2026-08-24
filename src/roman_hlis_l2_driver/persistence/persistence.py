@@ -36,8 +36,8 @@ def run(cfg: str,l2dir=None,delta_t_prime_max=1200.0,signal_threshold=20000.0):
     Returns
     -------
     mask_list : list
-        List containing the cumulative persistence mask and the
-        previous observation IDs used to construct it.
+        List containing tuples of the cumulative persistence mask
+        and the previous observation IDs used to construct it.
     """
     # Load config file
     with open(cfg, "r") as file:
