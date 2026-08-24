@@ -6,5 +6,8 @@ galsim
 fitsio
 asdf>=5.3.1
 asdf-astropy>=0.11.0
+healpy
 roman_datamodels
 pyimcom
+sep
+pandas

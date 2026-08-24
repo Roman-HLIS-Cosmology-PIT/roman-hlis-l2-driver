@@ -1,4 +1,8 @@
-.. image:: https://codecov.io/gh/Roman-HLIS-Cosmology-PIT/roman-hlis-l2-driver/graph/badge.svg?token=lZlsjikXXb 
+|badge1| |badge2|
+
+.. |badge1| image:: https://codecov.io/gh/Roman-HLIS-Cosmology-PIT/roman-hlis-l2-driver/graph/badge.svg
+
+.. |badge2| image:: https://github.com/Roman-HLIS-Cosmology-PIT/roman-hlis-l2-driver/actions/workflows/smoke-test.yml/badge.svg
 
 Level 2 Processing Tools
 ########################
@@ -12,6 +16,8 @@ Steps available:
   * `Image destriping <docs/imdestripe.rst>`_.
 
   * `Outlier rejection <docs/outlier.rst>`_.
+
+  * `Diffraction spike masking <docs/spike.rst>`_.
 
 * Level 2.1 --> 2.2:
 
@@ -28,6 +34,7 @@ The Level 2.0-->2.1 processing is carried out for each mosaic prior to running t
 
     tree["processinfo"]["destripe_complete"] = True
     tree["processinfo"]["outlier_complete"] = True
+    tree["processinfo"]["spike_complete"] = True
 
 Note that in addition to the main data files ``*_{obsid:d}_{sca:d}.asdf``, the destriping also acts on the noise files, ``*_{obsid:d}_{sca:d}_noise.asdf``. The ``outlier_complete`` flag in the main data file is updated at the end of the step.
 
@@ -44,6 +51,9 @@ The Level 2.0-->2.1 processing also adds a top-level "mask" image, ``tree["mask"
 +-------------+-----------------------------------------+
 | ``0x04``    | Flagged for persistence (*not yet       |
 |             | implemented; reserved*)                 |
++-------------+-----------------------------------------+
+| ``0x08``    | Flagged for diffraction spikes or       |
+|             | other optical phenomena.                |
 +-------------+-----------------------------------------+
 
 The convention is that a "good" pixel is denoted by a 0, and a "bad" pixel (or at least not to be included in the PyIMCOM coadds) is denoted by a 1.

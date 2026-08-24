@@ -5,6 +5,7 @@ import os
 import asdf
 import gwcs
 import numpy as np
+import pytest
 from astropy import coordinates as coord
 from astropy import units as u
 from astropy import wcs
@@ -321,13 +322,6 @@ def test_ffov(tmp_path):
         maskfile=tmp_path + r"/testmask{:02d}.fits",
     ).to_file(tmp_path + "/testffov.fits")
 
-    # Remove old files
-    for sca in range(1, 19):
-        if sca != 11:
-            os.remove(tmp_path + f"/testimage{sca:02d}.asdf")
-        if sca not in [1, 8, 11]:
-            os.remove(tmp_path + f"/testmask{sca:02d}.fits")
-
     # Now some tests
     with fits.open(tmp_path + "/testffov.fits") as f:
         # tests to run on all the good SCAs
@@ -409,3 +403,23 @@ def test_ffov(tmp_path):
     valid_target[1 - 1] = False
     print(valid)
     assert np.all(valid == valid_target)
+
+    # now remove the gain information and check this runs
+    with asdf.open(tmp_path + "/testimage05.asdf", mode="rw") as a:
+        del a.tree["processinfo"]["medgain"]
+        a.update()
+    with asdf.open(tmp_path + "/testimage05.asdf") as a:
+        assert "medgain" not in a["processinfo"]
+    with pytest.warns(UserWarning, match="Couldn't find median gain, switching to default value."):
+        FullFoVImage(
+            tmp_path + r"/testimage{:02d}.asdf",
+            maskfile=tmp_path + r"/testmask{:02d}.fits",
+        ).to_file(tmp_path + "/testffov.fits")
+    os.remove(tmp_path + "/testffov.fits")
+
+    # Remove old files
+    for sca in range(1, 19):
+        if sca != 11:
+            os.remove(tmp_path + f"/testimage{sca:02d}.asdf")
+        if sca not in [1, 8, 11]:
+            os.remove(tmp_path + f"/testmask{sca:02d}.fits")
