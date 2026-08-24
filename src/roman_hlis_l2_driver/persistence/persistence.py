@@ -13,7 +13,7 @@ from erfa import ErfaWarning
 from . import persistence_flag as pf
 
 
-def run(cfg: str, l2dir=None, delta_t_prime_max=1200.0, signal_threshold=20000.0):
+def run(cfg: str, l2dir=None, delta_t_prime_max=1200.0, signal_threshold=20000.0, nmax=20):
     """
     Search previous L2 observations for pixels that may produce
     persistence in the current L2.1 observation.
@@ -22,22 +22,23 @@ def run(cfg: str, l2dir=None, delta_t_prime_max=1200.0, signal_threshold=20000.0
     ----------
     cfg : str
         File path to pyIMCOM config JSON.
-
     l2dir : str, optional
         Directory containing L2 ASDF files.
-
     delta_t_prime_max : float
         Maximum persistence lookback time in seconds.
-
     signal_threshold : float
         Minimum previous-observation signal in DN for a pixel
         to be considered capable of causing persistence.
-
+    nmax : int
+        Maximum number of steps allowed to take back from L2.1 obsid.
+        
     Returns
     -------
     mask_list : list
-        List containing tuples of the cumulative persistence mask
-        and the previous observation IDs used to construct it.
+        List containing tuples of:
+        - the cumulative persistence mask: np.array of boolean values
+        - list of previous obsids: list of int
+        - the obsid of the associated L2.1 file: int
     """
     # Load config file
     with open(cfg, "r") as file:
@@ -98,9 +99,11 @@ def run(cfg: str, l2dir=None, delta_t_prime_max=1200.0, signal_threshold=20000.0
 
         search_obsid = current_obsid
         total_delta_t = 0.0
+        nmax_counter = 0
 
         # walk backwards through obsids
         while True:
+            nmax_counter += 1
             print(f"Searching for observation before OBSID {search_obsid}")
 
             result = pf.get_prev_obs(obs_file_path, id=search_obsid)
@@ -130,7 +133,9 @@ def run(cfg: str, l2dir=None, delta_t_prime_max=1200.0, signal_threshold=20000.0
                 print(f"delta_t_prime = {delta_t_prime:.3f} sec > {delta_t_prime_max:.3f} sec")
                 print("Persistence lookback window reached.")
                 break
-
+            if nmax_counter > nmax:
+                warnings.warn(f"nmax counter exceeding, exiting early.")
+                break
             prev_ids.append(prev_id)
 
             # Find matching L2 file using OBSID only
@@ -180,9 +185,6 @@ def run(cfg: str, l2dir=None, delta_t_prime_max=1200.0, signal_threshold=20000.0
         print(f"Total pixels in cumulative persistence mask: {np.count_nonzero(persistence_mask)}")
 
         # Actually put our result into mask_list
-        mask_list.append((persistence_mask, prev_ids))
-
-        print("debug, stopping after first valid L2.1 file.")
-        return mask_list
+        mask_list.append((persistence_mask, prev_ids, obsid))
 
     return mask_list
