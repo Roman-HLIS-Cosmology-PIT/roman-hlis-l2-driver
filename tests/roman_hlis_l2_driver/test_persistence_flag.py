@@ -112,6 +112,38 @@ def obsfile(tmp_path):
     return obsfile
 
 
+def make_l21_asdf(l21_dir, obsid, sca, wcsobj, nside = 4088):
+    """ Creates a generic L2.1 ASDF file."""
+    image = np.zeros((nside, nside), dtype=np.float32)
+    dq = np.zeros((nside, nside), dtype=np.uint32)
+    es = np.full((nside, nside), -1, dtype=np.int8)
+    
+    tree = {
+        "processinfo": {
+            "endslice": es,
+        },
+        "roman": {
+            "meta": {
+                "wcs": wcsobj,
+                "instrument": {
+                    "optical_element": "F158",
+                    "detector": f"WFI{sca:02d}",
+                },
+            },
+            "data": image,
+            "dq": dq,
+        },
+    }
+    
+    path =l21_dir/f"sim_L2_1_H158_{obsid}_{sca}.asdf"
+    asdf.AsdfFile(tree).write_to(
+        path,
+        all_array_compression="zlib",
+    )
+    
+    return path
+
+
 @pytest.fixture
 def asdf_files(tmp_path):
     """Create mock asdf files for testing persistence flagging."""
@@ -198,32 +230,27 @@ def asdf_files(tmp_path):
         asdf.AsdfFile(tree).write_to(outfile, all_array_compression="zlib")
 
     # generate one asdf file in the L2.1 directory to get the ball rolling
-    current_image = np.zeros((nside, nside), dtype=np.float32)
-    current_dq = np.zeros((nside, nside), dtype=np.uint32)
-    current_es = np.full((nside, nside), -1, dtype=np.int8)
-    current_tree = {
-        "processinfo": {
-            "endslice": current_es,
-        },
-        "roman": {
-            "meta": {
-                "wcs": wcsobj,
-                "instrument": {
-                    "optical_element": "F158",
-                    "detector": f"WFI{sca:02d}",
-                },
-            },
-            "data": current_image,
-            "dq": current_dq,
-        },
-    }
-    current_path = l21_dir / f"sim_L2_1_H158_9_{sca}.asdf"
-    asdf.AsdfFile(current_tree).write_to(current_path, all_array_compression="zlib")
+    current_path = make_l21_asdf(
+        l21_dir = l21_dir,
+        obsid=9,
+        sca=sca,
+        wcsobj=wcsobj,
+        nside=nside,
+    )
+
+    no_prev_path = make_l21_asdf(
+        l21_dir = l21_dir,
+        obsid=0,
+        sca=sca,
+        wcsobj=wcsobj,
+        nside=nside,
+    )
 
     return {
         "l2_dir": l2_dir,
         "l21_dir": l21_dir,
         "current_path": current_path,
+        "no_prev_path": no_prev_path,
         "pixels": {name: (int(round(y)), int(round(x))) for name, (x, y) in detector_locations.items()},
         "expected_obsids": [8, 7, 6, 5, 4, 3],
     }
@@ -302,6 +329,20 @@ def config(tmp_path, obsfile, asdf_files):
         json.dump(config, config_file, indent=4)
 
     return config_path
+
+
+@pytest.fixture
+def empty_l21_dir(tmp_path):
+    """ Create an L2.1 directory with no applicable ASDF files."""
+    empty_dir = tmp_path / "L2_1_empty"
+    empty_dir.mkdir()
+
+    # files that do NOT match our regex search pattern
+    (empty_dir / "README.txt").write_text("Not an ASDF file.")
+    (empty_dir / "incorrect_file.asdf").touch()
+    (empty_dir / "sim_L2_H158_9_17.asdf").touch()
+
+    return empty_dir
 
 
 @pytest.fixture
@@ -488,6 +529,7 @@ def test_persistence_flagging(config, asdf_files):
     mask_list = run(str(config))
 
     assert isinstance(mask_list, list)
+    assert isinstance(mask_list[2], list)
     assert len(mask_list) == 1
 
     persistence_mask, prev_obsids, current_obsid = mask_list[0]
@@ -508,3 +550,29 @@ def test_persistence_flagging(config, asdf_files):
 
     # this one should be too old
     assert not persistence_mask[pixels["star_too_old"]]
+
+def test_persistence_flagging_finds_no_prev_in_l2(config, asdf_files):
+    """ Checks whether an L2.1 observation with no previous obsid in L2 is skipped."""
+    mask_list = run(str(config))
+    current_obsids = [result[2] for result in mask_list]
+    
+    assert 0 not in current_obsids
+    assert 9 in current_obsids
+
+def test_no_matching_l21_files(config, empty_l21_dir, tmp_path):
+    """ Checks whether sending run() a L2.1 with no
+    applicable L2.1 files returns nothing.
+    """
+    with config.open("r", encoding = "utf-8") as config_file:
+        test_config = json.load(config_file)
+
+    test_config["INDATA"][0] =f"{empty_l21_dir}/"
+    empty_config_path = tmp_path / "emppty_l21_config.json"
+
+    with empty_config_path.open("w", encoding = "utf-8") as config_file:
+        json.dump(test_config, config_file, indent=4)
+
+    mask_list = run(str(empty_config_path))
+
+    assert isinstance(mask_list, list)
+    assert mask_list == []
