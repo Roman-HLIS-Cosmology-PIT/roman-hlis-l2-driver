@@ -25,7 +25,7 @@ You can run this via:
     persistence_mask, prev_obsids, current_obsid = run(cfg, update = True)
 
     # persistence_mask = the cumulative np.array of boolean values
-    # prev_obsids = list of the obsids for the previous exposures that built the mask
+    # prev_obsids = list of the obsids for the previous exposures used to build the mask
     # current_obsid = observation ID of the exposure/file being processed
 
 
