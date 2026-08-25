@@ -17,9 +17,11 @@ You can run this via:
 
     from roman_hlis_l2_driver.persistence.main import run
 
-    # here cfg is a json configuration file with... ,
-    # and we set the update kwarg to True so that the module automatically sets flags
-    # for pixels showing signs of persistence
+    # Here, cfg is a json dictionary with an 'INDATA' key storing the path to the L2.1 directory
+    # and an 'OBSFILE' key storing the path to the corresponding observation table FITS file
+    # containing the exposure date and time of the observations presently in the L2.1 directory.
+    # We set the update kwarg to True so that the module automatically sets flags
+    # for pixels showing signs of persistence.
     persistence_mask, prev_obsids, current_obsid = run(cfg, update = True)
 
     # persistence_mask = the cumulative np.array of boolean values
