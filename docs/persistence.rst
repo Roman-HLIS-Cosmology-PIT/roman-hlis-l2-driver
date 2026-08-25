@@ -1,1 +1,7 @@
-.. describe how to run the persistence algorithm and what (if anything) it requires about how the files are organized
+Persistence flagging
+####################
+
+This step flags pixels that are affected by persistence from previous exposures.
+
+Overview
+========
