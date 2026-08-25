@@ -9,9 +9,9 @@ Since persistence is the retention of signal from previous exposures, this modul
 
 As the L2.1 directory is populated in batches that may not necessarily be in sequential or chronological order, the module must be agnostic towards the sorting, or lack thereof, of the directories it searches through.
 
-Upon finding associated previous exposures that are within the expected persistence lifetime set by 'delta_t_prime_max' (default kwarg set to 1,200 seconds) and have pixels whose values meet or exceed the 'signal_threshold' criteria (default kwarg set to 20,000 DN), the module will set the 0x04 flag ON for that pixel so that it will be excluded from later steps of the pipeline.
+Upon finding associated previous exposures that are within the expected persistence lifetime set by ``delta_t_prime_max`` (default kwarg set to 1,200 seconds) and have pixels whose values meet or exceed the ``signal_threshold`` criteria (default kwarg set to 20,000 DN), the module will set the ``0x04`` flag ON for that pixel so that it will be excluded from later steps of the pipeline.
 
-The json configuration file passed to persistence.main.run() must contain both an OBSFILE and INDATA key. Furthermore, the OBSFILE FITS file it points to should contain 'date' and 'exptime' tables, as the former is used to know the ordering of the observations and the latter is needed to go from DN/s to DN when determining whether or not a pixel meets the persistence 'signal_threshold'.
+The json configuration file passed to ``persistence.main.run()`` must contain both an ``OBSFILE`` and ``INDATA`` key. Furthermore, the ``OBSFILE FITS`` file it points to should contain ``date`` and ``exptime`` tables, as the former is used to know the ordering of the observations and the latter is needed to go from DN/s to DN when determining whether or not a pixel meets the persistence ``signal_threshold``.
 
 You can run this via:
 
