@@ -574,7 +574,7 @@ def test_persistence_flagging_finds_no_prev_in_l2(config, asdf_files, tmp_path):
     with test_config_path.open("w", encoding="utf-8") as config_file:
         json.dump(test_config, config_file, indent=4)
 
-    mask_list = run(str(test_config_path),l2dir=str(asdf_files["l2_dir"]))
+    mask_list = run(str(test_config_path), l2dir=str(asdf_files["l2_dir"]))
 
     assert isinstance(mask_list, list)
     assert mask_list == []
