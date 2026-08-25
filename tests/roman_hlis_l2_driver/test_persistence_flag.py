@@ -524,7 +524,7 @@ def test_get_prev_obs_with_nbackup_passed(observation_table):
 
 
 def test_persistence_flagging(config, asdf_files):
-    """Make sure persistence.run() returns a persistence mask, 
+    """Make sure persistence.run() returns a persistence mask,
     a list of the correct obsids used to build it, namely: [8,7,6,5,4,3],
     and a list containing the obsid in the L2.1 directory, [9]
     """
