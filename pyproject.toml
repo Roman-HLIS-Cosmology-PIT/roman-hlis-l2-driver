@@ -97,3 +97,8 @@ ignore = [
 
 [tool.coverage.run]
 omit=["src/roman_hlis_l2_driver/_version.py"]
+
+[tool.setuptools.package-data]
+"roman_hlis_l2_driver.data" = [
+    "spikedata.asdf"
+]

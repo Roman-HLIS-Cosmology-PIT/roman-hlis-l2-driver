@@ -12,9 +12,7 @@ from astropy.io import fits
 from pyimcom.config import Settings as Stn
 from pyimcom.utils.compareutils import get_overlap_matrix, map_sca2sca
 from pyimcom.wcsutil import PyIMCOM_WCS
-from scipy.interpolate import RegularGridInterpolator
-from scipy.ndimage import maximum_filter
-from scipy.signal import convolve2d
+from scipy.ndimage import convolve1d, map_coordinates, maximum_filter
 
 from ..name_util import stem_l2, stem_mask
 
@@ -63,8 +61,8 @@ def _blot(arr, a=0.25):
     """
 
     k1d = np.array([a, 1 - 2 * a, a])
-    kernel = np.outer(k1d, k1d)
-    arr[:, :] = convolve2d(arr, kernel, mode="same", boundary="symm")
+    convolve1d(arr, k1d, axis=0, output=arr, mode="reflect")
+    convolve1d(arr, k1d, axis=1, output=arr, mode="reflect")
 
 
 def _blot_mask(arr):
@@ -305,7 +303,8 @@ class OutlierMap:
 
         # get the list of other ("j") observations
         jlist = list(np.where(self.ovmat[iobs, :] > 1e-3)[0])
-        stack = np.full((1, Stn.sca_nside, Stn.sca_nside), np.nan, dtype=np.float32)
+        # ND: preassigning the stack here to save memory
+        stack = np.full((len(jlist) + 1, Stn.sca_nside, Stn.sca_nside), np.nan, dtype=np.float32)
         ct = np.zeros((Stn.sca_nside, Stn.sca_nside), dtype=np.uint8)
         ns = 1
 
@@ -314,36 +313,34 @@ class OutlierMap:
             if jobs == iobs:
                 continue  # don't compare to yourself!
             x_target, y_target, is_in_ref = map_sca2sca(self.wcs[iobs], self.wcs[jobs], pad=0)
-            coords = np.column_stack((y_target.ravel(), x_target.ravel()))
-            interpolator = RegularGridInterpolator(
-                (np.arange(Stn.sca_nside), np.arange(Stn.sca_nside)),
-                self.image[jobs, :, :],
-                method="linear",
-                bounds_error=False,
-                fill_value=0.0,
+
+            coords = [y_target, x_target]
+
+            interp_data = map_coordinates(
+                self.image[jobs, :, :], coords, order=1, mode="constant", cval=0.0, prefilter=False
             )
-            interp_data = interpolator(coords).reshape((Stn.sca_nside, Stn.sca_nside))
-            interpolator = RegularGridInterpolator(
-                (np.arange(Stn.sca_nside), np.arange(Stn.sca_nside)),
-                1.0 - self.mask[jobs, :, :],
-                method="linear",
-                bounds_error=False,
-                fill_value=0.0,
+
+            interp_good_raw = map_coordinates(
+                1.0 - self.mask[jobs, :, :].astype(np.float32),
+                coords,
+                order=1,
+                mode="constant",
+                cval=0.0,
+                prefilter=False,
             )
-            interp_good = interpolator(coords).reshape((Stn.sca_nside, Stn.sca_nside)) > 1e-9
-            del interpolator
+            interp_good = interp_good_raw > 1e-9
             ct += interp_good
             if np.any(ct > ns):
                 ns = ns + 1
-                stack = np.vstack(
-                    (stack, np.full((1, Stn.sca_nside, Stn.sca_nside), np.nan, dtype=np.float32))
-                )
+
             for k in range(ns):
                 stack[k, :, :] = np.where(
                     np.logical_and(ct == k + 1, interp_good), interp_data, stack[k, :, :]
                 )
 
         del interp_data
+
+        stack = stack[:ns, :, :]
 
         # get the median and maximum
         out = np.zeros((6, Stn.sca_nside, Stn.sca_nside), dtype=np.float32)
@@ -486,6 +483,17 @@ class OutlierMap:
         print(iobs, self.files[iobs], iqr, np.count_nonzero(mask))
 
         return mask, out
+
+    def _worker_outlier_mask(self, di, kwargs):
+        """
+        Picklable worker method for multiprocessing.
+        Returns the index and the computed mask array.
+        """
+        print("Running:", di)
+        sys.stdout.flush()
+        # ilist[0] is always 0 based on your initialization, so we can just pass di
+        r, _ = self.outlier_mask(di, **kwargs)
+        return di, r
 
     def build_masks(self, **kwargs):
         """

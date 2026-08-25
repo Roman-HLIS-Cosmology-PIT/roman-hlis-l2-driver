@@ -1,4 +1,5 @@
 import concurrent.futures
+import multiprocessing as mp
 import os
 import sys
 
@@ -91,7 +92,7 @@ def setup_all_files(
     n = len(fileprefix)
     numus = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "_"}
     use_files = []
-    for f in os.listdir(fdir):
+    for f in sorted(os.listdir(fdir)):  # sort is not critical, just to simplify debugging
         if len(use_files) == max_files:
             break
         if f[:n] == fileprefix and f[-5:] == ".asdf" and all(c in numus for c in f[n:-5]):
@@ -103,7 +104,9 @@ def setup_all_files(
         # this is so that pytest knows _setup_one_file is being run
         _setup_one_file((use_files[0], outprefix, Stn.sca_nside, noiseid, wcs_order, verbose))
     # now the main run
-    with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as e:
+    with concurrent.futures.ProcessPoolExecutor(
+        max_workers=max_workers, mp_context=mp.get_context("spawn")
+    ) as e:
         e.map(_setup_one_file, use_files2)
 
     return use_files
@@ -113,11 +116,11 @@ def setup_all_files(
 # python destripe_setup.py /fs/scratch/PCON0003/cond0007/fall2025/sim/L2/sim_L2_H158_ \
 #     /fs/scratch/PCON0003/cond0007/temp/t_
 if __name__ == "__main__":
-    file_prefix = sys.argv[1]
-    out_prefix = sys.argv[2]
-    if len(sys.argv) > 3:
-        setup_all_files(
-            file_prefix, out_prefix, max_files=4, wcs_order=3, noiseid=int(sys.argv[3]), verbose=True
-        )
-    else:
-        setup_all_files(file_prefix, out_prefix, max_files=4, wcs_order=3, verbose=True)
+    setup_all_files(
+        sys.argv[1],  # file_prefix
+        sys.argv[2],  # out_prefix
+        max_files=4,
+        wcs_order=3,
+        noiseid=(int(sys.argv[3]) if len(sys.argv) > 3 else None),
+        verbose=True,
+    )

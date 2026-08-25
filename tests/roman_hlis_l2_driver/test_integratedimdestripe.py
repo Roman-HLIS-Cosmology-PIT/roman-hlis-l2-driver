@@ -7,8 +7,9 @@ from urllib.request import urlretrieve
 
 import asdf
 import numpy as np
+import pytest
 from astropy.io import fits
-from roman_hlis_l2_driver.destripe_interface import destripe
+from roman_hlis_l2_driver.destripe_interface import destripe, destripe_setup
 from roman_hlis_l2_driver.outliers import outlier_flagging
 
 # Example configuration file.
@@ -85,6 +86,20 @@ EXAMPLE_CONFIG = """{
 """
 
 
+def test_null(tmp_path):
+    """Tests when you give destripe_one_layer zero files."""
+
+    tmp_path = str(tmp_path)  # convert to string
+
+    # first, get the configuration file.
+    with open(tmp_path + "/cfg.txt", "w") as f:
+        f.write(EXAMPLE_CONFIG.replace("$TMPDIR", str(tmp_path)))
+
+    # now make a directory
+    os.makedirs(tmp_path + "/L2", exist_ok=True)
+    assert destripe.destripe_one_layer(tmp_path + "/cfg.txt") is None
+
+
 def _collect(files, newloc):
     """Collects files for the test, sends to `newloc`."""
 
@@ -126,6 +141,25 @@ def test_integrated(tmp_path):
         cpath,
         tmp_path + "/L2",
     )
+
+    # test moving files as if they are noise
+    os.makedirs(tmp_path + "/asifnoise-F", exist_ok=True)
+    destripe_setup.setup_all_files(
+        tmp_path + "/L2/sim_L2_F184",
+        tmp_path + "/asifnoise-F/nf",
+        max_files=1,
+        noiseid=0,
+        verbose=True,
+        tracktest=True,
+    )
+    with asdf.open(tmp_path + "/L2/sim_L2_F184_1433_11.asdf") as a1:
+        block = np.copy(a1["roman"]["data"][:16, :16])
+    with asdf.open(tmp_path + "/L2/sim_L2_F184_1433_11_noise.asdf") as a2:
+        block += a2["noise"][0, :16, :16]
+    with fits.open(tmp_path + "/asifnoise-F/nf_1433_11.fits") as f:
+        assert np.allclose(f[0].data[:16, :16], block, atol=1e-5, rtol=1e-5)
+    # now clear old files (this part also asserts that they exist!)
+    os.remove(tmp_path + "/asifnoise-F/nf_1433_11.fits")
 
     # make directories for imdestripe
     os.makedirs(tmp_path + "/ds-F", exist_ok=True)
@@ -190,7 +224,7 @@ def test_integrated(tmp_path):
 
     # now run outliers!
     # this test won't actually flag anything because of insufficient overlap, but it exercises the mechanics
-    outlier_flagging.OutlierMap(
+    om = outlier_flagging.OutlierMap(
         tmp_path + "/cfg.txt",
         max_workers=2,
         run_and_save=tmp_path + "/mask_F1.asdf",
@@ -202,6 +236,12 @@ def test_integrated(tmp_path):
         assert a["files"][0][-24:] == "sim_L2_F184_1433_11.asdf"
         assert np.shape(a["mask"]) == (3, 4088, 4088)
         assert np.all(np.abs(a["overlap"] - mtarget) < 0.02)
+    # exercise some other OutlierMap functionality
+    with pytest.raises(ValueError):
+        om.save_data("haha.nosuchextension")
+    assert om._worker_outlier_mask(0, {"cut_c": 0.3})[0] == 0
+    om2 = outlier_flagging.OutlierMap(tmp_path + "/cfg.txt", max_files=1)
+    assert om2.n_obs == 1
 
     # now clear old files (this part also asserts that they exist!)
     delfiles = [

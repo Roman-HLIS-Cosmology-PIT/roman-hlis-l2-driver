@@ -11,6 +11,7 @@ FullFoVImageFromFile
 """
 
 import copy
+import warnings
 
 import asdf
 import numpy as np
@@ -159,7 +160,11 @@ class FullFoVImage:
                     filter = a["roman"]["meta"]["instrument"]["optical_element"]
 
                     # effective gain information
-                    medgain = a["processinfo"]["medgain"]
+                    try:
+                        medgain = a["processinfo"]["medgain"]
+                    except KeyError:
+                        warnings.warn("Couldn't find median gain, switching to default value.")
+                        medgain = pars.ref_gain
                     pmeta = a["processinfo"]["meta"]  # for shorthand
                     t_eff = get_t_eff(pmeta["K"], pmeta["tbar"], pmeta["tau"])
                     print("t_eff =", t_eff, "s")
@@ -205,14 +210,14 @@ class FullFoVImage:
             new_hdu.header["ISVALID"] = (valid, "Was this SCA found?")
             new_hdu.header["HASMASK"] = (mask, "Was a mask applied?")
             new_hdu.header["HASWCS"] = bool(self.wcs is not None)
-            new_hdu.header["MJD"] = (mjd, "MJD of exposure start")
-            new_hdu.header["FILTER"] = (filter, "Filter name")
 
             # for now, not using the pixel-level error map
             new_hdu.header["ERRMAP"] = ("NULL", "Error map name")
 
             # add noise information
             if valid:
+                new_hdu.header["FILTER"] = (filter, "Filter name")
+                new_hdu.header["MJD"] = (mjd, "MJD of exposure start")
                 print(f"g_eqv = {eqvgain}, variance {bkgndvar1} from read, {bkgndvar2} from sky Poisson")
                 new_hdu.header["EQVGAIN"] = (eqvgain, "Equivalent gain in weighted electrons per int in file")
                 new_hdu.header["BKGNDVAR"] = (bkgndvar1 + bkgndvar2, "Variance at background level")
