@@ -108,12 +108,13 @@ def run(cfg: str, l2dir=None, delta_t_prime_max=1200.0, signal_threshold=20000.0
 
             result = pf.get_prev_obs(obs_file_path, id=search_obsid)
 
-            # Reached beginning / no previous observation
-            if result is None:
+            prev_id, delta_t = result
+            # get_prev_obs() returns (None, None) when there is no
+            # no previous observation to be found.
+            if prev_id is None:
                 print("No previous observation found.")
                 break
 
-            prev_id, delta_t = result
             prev_id = int(prev_id)
 
             # Convert days -> seconds
