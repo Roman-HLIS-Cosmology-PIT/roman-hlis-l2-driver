@@ -178,8 +178,8 @@ def run(cfg: str, l2dir=None, delta_t_prime_max=1200.0, signal_threshold=20000.0
 
         if persistence_mask is None:
             print("No qualifying previous observations found.")
-
-            persistence_mask = np.zeros((4088, 4088), dtype=bool)
+            print(f"Previous observations searched: {prev_ids}")
+            continue
 
         print(f"Previous observations searched: {prev_ids}")
         print(f"Total pixels in cumulative persistence mask: {np.count_nonzero(persistence_mask)}")
