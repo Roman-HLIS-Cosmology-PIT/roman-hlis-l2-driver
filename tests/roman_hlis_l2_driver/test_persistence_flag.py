@@ -2,6 +2,7 @@
 
 import json
 
+import shutil
 import asdf
 import numpy as np
 import pytest
@@ -523,18 +524,20 @@ def test_get_prev_obs_with_nbackup_passed(observation_table):
 
 
 def test_persistence_flagging(config, asdf_files):
-    """Make sure persistence.run() returns a persistence mask and
-    a list of the correct obsids used to build it, namely: [8,7,6,5,4,3]
+    """Make sure persistence.run() returns a persistence mask, 
+    a list of the correct obsids used to build it, namely: [8,7,6,5,4,3],
+    and a list containing the obsid in the L2.1 directory, [9]
     """
     mask_list = run(str(config))
 
     assert isinstance(mask_list, list)
-    assert isinstance(mask_list[2], list)
     assert len(mask_list) == 1
 
     persistence_mask, prev_obsids, current_obsid = mask_list[0]
 
     assert isinstance(persistence_mask, np.ndarray)
+    assert isinstance(current_obsid, list)
+    assert current_obsid == [9]
     assert persistence_mask.shape == (4088, 4088)
     assert prev_obsids == [8, 7, 6, 5, 4, 3]
 
@@ -552,13 +555,29 @@ def test_persistence_flagging(config, asdf_files):
     assert not persistence_mask[pixels["star_too_old"]]
 
 
-def test_persistence_flagging_finds_no_prev_in_l2(config, asdf_files):
+def test_persistence_flagging_finds_no_prev_in_l2(config, asdf_files, tmp_path):
     """Checks whether an L2.1 observation with no previous obsid in L2 is skipped."""
-    mask_list = run(str(config))
-    current_obsids = [result[2] for result in mask_list]
+    no_prev_dir = tmp_path / "L2_1_no_prev"
+    no_prev_dir.mkdir()
+    no_prev_path = asdf_files["no_prev_path"]
 
-    assert 0 not in current_obsids
-    assert 9 in current_obsids
+    shutil.copy(
+        no_prev_path,
+        no_prev_dir / no_prev_path.name,
+    )
+
+    with config.open("r", encoding="utf-8") as config_files:
+        test_config = json.load(config_file)
+
+    test_config["INDATA"][0] = f"{no+rev_dir}/"
+    test_config_path = tmp_path / "no_prev_config.json"
+    with test_config_path.open("w", encoding="utf-8") as config_file:
+        json.dump(test_config, config_file, indent=4)
+
+    mask_list = run(str(test_config_path))
+
+    assert isinstance(mask_list, list)
+    assert mask_list == []
 
 
 def test_no_matching_l21_files(config, empty_l21_dir, tmp_path):
@@ -569,7 +588,7 @@ def test_no_matching_l21_files(config, empty_l21_dir, tmp_path):
         test_config = json.load(config_file)
 
     test_config["INDATA"][0] = f"{empty_l21_dir}/"
-    empty_config_path = tmp_path / "emppty_l21_config.json"
+    empty_config_path = tmp_path / "empty_l21_config.json"
 
     with empty_config_path.open("w", encoding="utf-8") as config_file:
         json.dump(test_config, config_file, indent=4)
