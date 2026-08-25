@@ -13,6 +13,8 @@ Steps available:
 
   * `Outlier rejection <docs/outlier.rst>`_.
 
+  * `Persistence flagging <docs/persistence.rst>`_.
+
 * Level 2.1 --> 2.2:
 
   * `Full field of view map information <docs/ffovmaps.rst>`_.
@@ -42,8 +44,7 @@ The Level 2.0-->2.1 processing also adds a top-level "mask" image, ``tree["mask"
 +-------------+-----------------------------------------+
 | ``0x02``    | Flagged by outlier rejection step.      |
 +-------------+-----------------------------------------+
-| ``0x04``    | Flagged for persistence (*not yet       |
-|             | implemented; reserved*)                 |
+| ``0x04``    | Flagged for persistence                 |
 +-------------+-----------------------------------------+
 
 The convention is that a "good" pixel is denoted by a 0, and a "bad" pixel (or at least not to be included in the PyIMCOM coadds) is denoted by a 1.
