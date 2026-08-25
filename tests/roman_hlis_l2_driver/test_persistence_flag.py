@@ -566,21 +566,21 @@ def test_persistence_flagging_finds_no_prev_in_l2(config, asdf_files, tmp_path):
         no_prev_dir / no_prev_path.name,
     )
 
-    with config.open("r", encoding="utf-8") as config_files:
+    with config.open("r", encoding="utf-8") as config_file:
         test_config = json.load(config_file)
 
-    test_config["INDATA"][0] = f"{no+rev_dir}/"
+    test_config["INDATA"][0] = f"{no_prev_dir}/"
     test_config_path = tmp_path / "no_prev_config.json"
     with test_config_path.open("w", encoding="utf-8") as config_file:
         json.dump(test_config, config_file, indent=4)
 
-    mask_list = run(str(test_config_path))
+    mask_list = run(str(test_config_path),l2dir=str(asdf_files["l2_dir"])
 
     assert isinstance(mask_list, list)
     assert mask_list == []
 
 
-def test_no_matching_l21_files(config, empty_l21_dir, tmp_path):
+def test_no_matching_l21_files(config, asdf_files, empty_l21_dir, tmp_path):
     """Checks whether sending run() a L2.1 with no
     applicable L2.1 files returns nothing.
     """
