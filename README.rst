@@ -36,6 +36,7 @@ The Level 2.0-->2.1 processing is carried out for each mosaic prior to running t
 
     tree["processinfo"]["destripe_complete"] = True
     tree["processinfo"]["outlier_complete"] = True
+    tree["processinfo"]["persistence_complete"] = True
     tree["processinfo"]["spike_complete"] = True
 
 Note that in addition to the main data files ``*_{obsid:d}_{sca:d}.asdf``, the destriping also acts on the noise files, ``*_{obsid:d}_{sca:d}_noise.asdf``. The ``outlier_complete`` flag in the main data file is updated at the end of the step.
