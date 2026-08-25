@@ -341,7 +341,7 @@ def empty_l21_dir(tmp_path):
     # files that do NOT match our regex search pattern
     (empty_dir / "README.txt").write_text("Not an ASDF file.")
     (empty_dir / "incorrect_file.asdf").touch()
-    (empty_dir / "sim_L2_H158_9_17.asdf").touch()
+    (empty_dir / "sim_L2_1_H158_9_17_radec.asdf").touch()
 
     return empty_dir
 
@@ -536,8 +536,8 @@ def test_persistence_flagging(config, asdf_files):
     persistence_mask, prev_obsids, current_obsid = mask_list[0]
 
     assert isinstance(persistence_mask, np.ndarray)
-    assert isinstance(current_obsid, list)
-    assert current_obsid == [9]
+    assert isinstance(current_obsid, int)
+    assert current_obsid == 9
     assert persistence_mask.shape == (4088, 4088)
     assert prev_obsids == [8, 7, 6, 5, 4, 3]
 
@@ -593,7 +593,7 @@ def test_no_matching_l21_files(config, asdf_files, empty_l21_dir, tmp_path):
     with empty_config_path.open("w", encoding="utf-8") as config_file:
         json.dump(test_config, config_file, indent=4)
 
-    mask_list = run(str(empty_config_path))
+    mask_list = run(str(empty_config_path), l2dir=str(asdf_files["l2_dir"]))
 
     assert isinstance(mask_list, list)
     assert mask_list == []
