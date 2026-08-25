@@ -134,6 +134,7 @@ def make_l21_asdf(l21_dir, obsid, sca, wcsobj, nside=4088):
             "data": image,
             "dq": dq,
         },
+        "mask": np.zeros((4088, 4088), dtype=np.uint8),
     }
 
     path = l21_dir / f"sim_L2_1_H158_{obsid}_{sca}.asdf"
@@ -528,7 +529,7 @@ def test_persistence_flagging(config, asdf_files):
     a list of the correct obsids used to build it, namely: [8,7,6,5,4,3],
     and a list containing the obsid in the L2.1 directory, [9]
     """
-    mask_list = run(str(config))
+    mask_list = run(str(config), update=True)
 
     assert isinstance(mask_list, list)
     assert len(mask_list) == 1
@@ -553,6 +554,14 @@ def test_persistence_flagging(config, asdf_files):
 
     # this one should be too old
     assert not persistence_mask[pixels["star_too_old"]]
+
+    # now tests on whether the updates worked
+    ufile = str(asdf_files["l21_dir"]) + "/sim_L2_1_H158_9_17.asdf"
+    with asdf.open(ufile) as u:
+        assert 12 < np.count_nonzero(u["mask"] & 0x4) < 18
+        assert np.all((u["mask"] & 0x4).astype(bool) == persistence_mask)
+        assert u["processinfo"]["persistence_complete"]
+        assert u["processinfo"]["prev_ids"] == prev_obsids
 
 
 def test_persistence_flagging_finds_no_prev_in_l2(config, asdf_files, tmp_path):

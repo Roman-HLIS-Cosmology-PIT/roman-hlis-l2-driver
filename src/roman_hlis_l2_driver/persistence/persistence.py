@@ -13,7 +13,7 @@ from erfa import ErfaWarning
 from . import persistence_flag as pf
 
 
-def run(cfg: str, l2dir=None, delta_t_prime_max=1200.0, signal_threshold=20000.0, nmax=20):
+def run(cfg: str, l2dir=None, delta_t_prime_max=1200.0, signal_threshold=20000.0, nmax=20, update=False):
     """
     Search previous L2 observations for pixels that may produce
     persistence in the current L2.1 observation.
@@ -26,11 +26,13 @@ def run(cfg: str, l2dir=None, delta_t_prime_max=1200.0, signal_threshold=20000.0
         Directory containing L2 ASDF files.
     delta_t_prime_max : float
         Maximum persistence lookback time in seconds.
-    signal_threshold : float
+    signal_threshold : float, optional
         Minimum previous-observation signal in DN for a pixel
         to be considered capable of causing persistence.
-    nmax : int
+    nmax : int, optional
         Maximum number of steps allowed to take back from L2.1 obsid.
+    update : bool, optional
+        Whether to update the persistence flag in the L2.1 files.
 
     Returns
     -------
@@ -79,6 +81,7 @@ def run(cfg: str, l2dir=None, delta_t_prime_max=1200.0, signal_threshold=20000.0
     print(f"Indexed {len(l2_files)} L2 observation IDs")
 
     mask_list = []
+    l21files_list = []
 
     # loop over L2.1 files
     for infile in sorted(file_directory.iterdir()):
@@ -186,5 +189,21 @@ def run(cfg: str, l2dir=None, delta_t_prime_max=1200.0, signal_threshold=20000.0
 
         # Actually put our result into mask_list
         mask_list.append((persistence_mask, prev_ids, current_obsid))
+        l21files_list.append(infile)
+
+    # Update the persistence bit (0x4) if needed
+    if update:
+        for j in range(len(mask_list)):
+            with a.open(l21files_list[j], mode="rw") as _a:
+                _a["mask"] &= ~np.uint8(0x4)
+                _a["mask"] |= mask_list[j][0].astype(np.uint8) << 2
+                _a["processinfo"]["persistence_complete"] = True
+                _a["processinfo"]["prev_ids"] = mask_list[j][1]
+                _a.update()
+        for infile in sorted(file_directory.iterdir()):
+            if infile not in l21files_list:
+                with a.open(infile) as _a:
+                    _a["processinfo"]["persistence_complete"] = True
+                    _a["processinfo"]["prev_ids"] = []
 
     return mask_list
