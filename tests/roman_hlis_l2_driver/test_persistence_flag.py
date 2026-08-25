@@ -564,6 +564,17 @@ def test_persistence_flagging(config, asdf_files):
         assert u["processinfo"]["prev_ids"] == prev_obsids
 
 
+def test_persistence_flagging_short(config, asdf_files):
+    """Make sure persistence.run() returns a persistence mask,
+    a list of the correct obsids used to build it, namely: [8,7,6,5,4,3],
+    and a list containing the obsid in the L2.1 directory, [9]
+    """
+
+    with pytest.warns(UserWarning):
+        mask_list = run(str(config), update=True, nmax=2)
+    assert mask_list[0][1] == [8, 7]
+
+
 def test_persistence_flagging_finds_no_prev_in_l2(config, asdf_files, tmp_path):
     """Checks whether an L2.1 observation with no previous obsid in L2 is skipped."""
     no_prev_dir = tmp_path / "L2_1_no_prev"
