@@ -1,8 +1,8 @@
 # test_persistence_flag.py
 
 import json
-
 import shutil
+
 import asdf
 import numpy as np
 import pytest
