@@ -10,7 +10,7 @@ import numpy as np
 from astropy.io import fits as f
 from erfa import ErfaWarning
 
-from . import persistence_flag as pf
+from . import flag_utils as fut
 
 
 def run(cfg: str, l2dir=None, delta_t_prime_max=1200.0, signal_threshold=20000.0, nmax=20, update=False):
@@ -109,7 +109,7 @@ def run(cfg: str, l2dir=None, delta_t_prime_max=1200.0, signal_threshold=20000.0
             nmax_counter += 1
             print(f"Searching for observation before OBSID {search_obsid}")
 
-            result = pf.get_prev_obs(obs_file_path, id=search_obsid)
+            result = fut.get_prev_obs(obs_file_path, id=search_obsid)
 
             prev_id, delta_t = result
             # get_prev_obs() returns (None, None) when there is no
