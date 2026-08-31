@@ -223,6 +223,8 @@ def spike_driver(
     dp=256.0,
     update=True,
     thresh_detect=50.0,
+    minarea=5,
+    thresh_flux=None,
     maximg=None,
     matchrad=0.0002777777777777778,
 ):
@@ -243,6 +245,10 @@ def spike_driver(
         turn this off for diagnostics.)
     thresh_detect : float, optional
         The threshold to use (in DN/s).
+    minarea : int, optional
+        Minimum number of pixels for a SEP detection.
+    thresh_flux : float, optional
+        If provided, sets a threshold for total star flux (in DN/s).
     maximg : int, optional
         Use a maximum of this many SCAs; primarily used for testing.
     matchrad : float, optional
@@ -260,8 +266,12 @@ def spike_driver(
 
     """
 
-    stars_recovered, idsca = brightobj_from_manyimg(infile_format, thresh=thresh_detect, clean=True)
+    stars_recovered, idsca = brightobj_from_manyimg(
+        infile_format, thresh=thresh_detect, minarea=minarea, clean=True
+    )
     stars_unique = stars_recovered[stars_recovered["nchild"] > 0]
+    if thresh_flux is not None:
+        stars_unique = stars_unique[stars_unique["eflux"] > thresh_flux]
 
     l2files = [infile_format.format(*i) for i in idsca]
     print(l2files)
