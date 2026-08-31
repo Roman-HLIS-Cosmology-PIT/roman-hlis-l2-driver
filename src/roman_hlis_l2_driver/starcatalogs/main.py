@@ -169,7 +169,7 @@ def stardata_to_mask_wcs(l2file, catalog, thresh, dp=256.0):
     return stardata_to_mask(use_filter, sca, x[trim], y[trim], thresh / subcatalog["eflux"][trim])
 
 
-def stardata_to_mask_manyfiles(l2files, catalog, thresh, dp=256.0, update=True):
+def stardata_to_mask_manyfiles(l2files, catalog, thresh, dp=256.0, update=True, extras=None):
     """
     Makes a spike mask for a star catalog in world coordinates.
 
@@ -186,6 +186,8 @@ def stardata_to_mask_manyfiles(l2files, catalog, thresh, dp=256.0, update=True):
     update : bool, optional
         Whether to update the "mask" 0x8 bit in the ASDF files. (You should only need to
         turn this off for diagnostics.)
+    extras: dict, optional
+        If given, add this to the spike_pars data in the processinfo.
 
     Returns
     -------
@@ -212,6 +214,8 @@ def stardata_to_mask_manyfiles(l2files, catalog, thresh, dp=256.0, update=True):
                 a["mask"] |= mask[j].astype(np.uint8) << 3
                 a["processinfo"]["spike_complete"] = True
                 a["processinfo"]["spike_pars"] = {"thresh": thresh, "dp": dp}
+                if extras is not None:
+                    a["processinfo"]["spike_pars"] |= extras
                 a.update()
 
     return mask
@@ -272,10 +276,25 @@ def spike_driver(
     stars_unique = stars_recovered[stars_recovered["nchild"] > 0]
     if thresh_flux is not None:
         stars_unique = stars_unique[stars_unique["eflux"] > thresh_flux]
+    else:
+        thresh_flux = 0.0
 
     l2files = [infile_format.format(*i) for i in idsca]
     print(l2files)
-    m = stardata_to_mask_manyfiles(l2files, stars_unique, thresh_mask, dp=dp, update=update)
+    m = stardata_to_mask_manyfiles(
+        l2files,
+        stars_unique,
+        thresh_mask,
+        dp=dp,
+        update=update,
+        extras={
+            "thresh_mask": thresh_mask,
+            "thresh_detect": thresh_detect,
+            "minarea": minarea,
+            "thresh_flux": thresh_flux,
+            "matchrad": matchrad,
+        },
+    )
     npix_mask = np.count_nonzero(m)
 
     return stars_unique, npix_mask
