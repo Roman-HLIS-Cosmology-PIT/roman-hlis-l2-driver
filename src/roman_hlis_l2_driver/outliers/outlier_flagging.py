@@ -2,6 +2,7 @@ import gc
 import json
 import os
 import sys
+import traceback
 import warnings
 from concurrent.futures import ThreadPoolExecutor
 import pyarrow.parquet as pq
@@ -27,7 +28,7 @@ def _load_img_wcs(arg):
 
     (file, im) = arg
 
-    print(file)
+    print("WCS file: ", file)
     sys.stdout.flush()
     with asdf.open(file) as a:
         im[:, :] = a["roman"]["data"]
@@ -39,7 +40,7 @@ def _load_mask(arg):
 
     (file, hdu, bits, im) = arg
 
-    print(file)
+    print("Mask file: ", file)
     sys.stdout.flush()
     with fits.open(file) as f:
         im[:, :] = f[hdu].data & bits != 0
@@ -118,10 +119,10 @@ def _get_stars_in_image(star_catalog, wcs):
             star_catalog_df = pf.read().to_pandas()
             ny, nx = Stn.sca_nside, Stn.sca_nside
             corners = np.array([[0,  0 ], [nx, 0 ], [0,  ny], [nx, ny]])
-            sky = wcs.pixel_to_world(corners[:, 0], corners[:, 1])
+            sky = wcs.all_pix2world(corners, 0)
 
-            ra  = sky.ra.deg
-            dec = sky.dec.deg
+            ra  = sky[:, 0]
+            dec = sky[:, 1]
 
             ra_min,  ra_max  = ra.min(),  ra.max()
             dec_min, dec_max = dec.min(), dec.max()
@@ -162,39 +163,49 @@ def _compare_star_moments(star_catalog_df, iobs, image, wcs, interp, jobs, debug
         hdu_list = [fits.PrimaryHDU()]
         moments_vals = []
 
-    for index, row in star_catalog_df.iterrows():
-        x_star, y_star = wcs.world_to_pixel(SkyCoord(row['ra']*u.degree, row['dec']*u.degree))
-        x_star = round(x_star)
-        y_star = round(y_star)
+    #limit to first 100 stars for debugging
+    for index, row in star_catalog_df.head(100).iterrows():
+        xy_star = wcs.all_world2pix(row['ra'], row['dec'], 0)
+        x_star = round(xy_star[0])
+        y_star = round(xy_star[1])
         if x_star < 50 or x_star > Stn.sca_nside - 50 or y_star < 50 or y_star > Stn.sca_nside - 50:
             continue
-        cutout_iobs = image[y_star-25:y_star+25, x_star-25:x_star+25]
-        cutout_interp = interp[y_star-25:y_star+25, x_star-25:x_star+25]
-        
+        cutout_iobs = galsim.Image(image[y_star-25:y_star+25, x_star-25:x_star+25])
+        cutout_interp = galsim.Image(interp[y_star-25:y_star+25, x_star-25:x_star+25])
+    
         # measure the moments using galsim hsm
         try:
             hsm_iobs = galsim.hsm.FindAdaptiveMom(cutout_iobs, round_moments=True)
             hsm_interp = galsim.hsm.FindAdaptiveMom(cutout_interp, round_moments=True)
             star_catalog_df.loc[index, f'hsm_sigma_iobs_{iobs}'] = hsm_iobs.moments_sigma
-            star_catalog_df.loc[index, f'hsm_centroid_iobs_{iobs}'] = hsm_iobs.moments_centroid
-            hsm_iobs_centroid_sky = wcs.pixel_to_world(hsm_iobs.moments_centroid.x, hsm_iobs.moments_centroid.y)
-            star_catalog_df.loc[index, f'hsm_centroid_iobs_{iobs}_sky'] = hsm_iobs_centroid_sky
+            star_catalog_df.loc[index, f'hsm_centroidX_iobs_{iobs}'] = hsm_iobs.moments_centroid.x
+            star_catalog_df.loc[index, f'hsm_centroidY_iobs_{iobs}'] = hsm_iobs.moments_centroid.y
+            hsm_iobs_centroid_sky = wcs.all_pix2world(hsm_iobs.moments_centroid.x, 
+                                                      hsm_iobs.moments_centroid.y,
+                                                      0)
+            star_catalog_df.loc[index, f'hsm_centroidRA_iobs_{iobs}_sky'] = hsm_iobs_centroid_sky[0]
+            star_catalog_df.loc[index, f'hsm_centroidDEC_iobs_{iobs}_sky'] = hsm_iobs_centroid_sky[1]
             star_catalog_df.loc[index, f'hsm_sigma_interp_{jobs}'] = hsm_interp.moments_sigma
-            star_catalog_df.loc[index, f'hsm_centroid_interp_{jobs}'] = hsm_interp.moments_centroid
-            hsm_interp_centroid_sky = wcs.pixel_to_world(hsm_interp.moments_centroid.x, hsm_interp.moments_centroid.y)
-            star_catalog_df.loc[index, f'hsm_centroid_interp_{jobs}_sky'] = hsm_interp_centroid_sky
+            star_catalog_df.loc[index, f'hsm_centroidX_interp_{jobs}'] = hsm_interp.moments_centroid.x
+            star_catalog_df.loc[index, f'hsm_centroidY_interp_{jobs}'] = hsm_interp.moments_centroid.y
+            hsm_interp_centroid_sky = wcs.all_pix2world(hsm_interp.moments_centroid.x,
+                                                        hsm_interp.moments_centroid.y,
+                                                        0)
+            star_catalog_df.loc[index, f'hsm_centroidRA_interp_{jobs}_sky'] = hsm_interp_centroid_sky[0]
+            star_catalog_df.loc[index, f'hsm_centroidDEC_interp_{jobs}_sky'] = hsm_interp_centroid_sky[1]
         except Exception as e:
-            print(f"Error measuring moments for star at index {index}: {e}")
+            print(f"Error measuring moments for image {iobs} star at index {index}: {e}")
+            # traceback.print_exc()
 
         if debug_outputs and jobs<=2 and index<5:  
             hdu_list.append(fits.ImageHDU(cutout_iobs, name=f'star_{index}_iobs_{iobs}'))
             hdu_list.append(fits.ImageHDU(cutout_interp, name=f'star_{index}_interp_{jobs}'))
             moments_vals.append([index, row['ra'], row['dec'],
                                  hsm_iobs.moments_sigma, hsm_iobs.moments_centroid.x, hsm_iobs.moments_centroid.y,
-                                 hsm_iobs_centroid_sky.ra.deg, hsm_iobs_centroid_sky.dec.deg,
+                                 hsm_iobs_centroid_sky[0], hsm_iobs_centroid_sky[1],
                                  hsm_interp.moments_sigma, 
                                  hsm_interp.moments_centroid.x, hsm_interp.moments_centroid.y,
-                                 hsm_interp_centroid_sky.ra.deg, hsm_interp_centroid_sky.dec.deg
+                                 hsm_interp_centroid_sky[0], hsm_interp_centroid_sky[1]
                                  ])
             
     if debug_outputs and jobs<=2:
@@ -337,8 +348,11 @@ class OutlierMap:
 
         # add tails as needed
         file_prefix += stem_l2(file_format, filter)
+        print(f"file_prefix: {file_prefix}")
 
         fdir, fileprefix = os.path.split(file_prefix)
+        print(f"fdir: {fdir}, fileprefix: {fileprefix}")
+
         n = len(fileprefix)
         numus = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "_"}
         self.files = []
@@ -348,9 +362,11 @@ class OutlierMap:
             if len(self.files) == max_files:
                 break
         self.n_obs = len(self.files)
-        self.star_catalog = star_catalog  # KL
+        # self.star_catalog = star_catalog  # KL
+        self.star_catalog = "/fs/scratch/PCON0003/cond0007/temp_kl/astrom_test_dev/L2/test_detections.parquet"  # KL
 
-        print(self.n_obs)
+        print(f"self.n_obs: {self.n_obs}")
+        print(f"self.star_catalog: {self.star_catalog}")
 
         # image arrays
         self.image = np.zeros((self.n_obs, Stn.sca_nside, Stn.sca_nside), dtype=np.float32)
@@ -361,7 +377,7 @@ class OutlierMap:
                 e.map(_load_img_wcs, [(self.files[i], self.image[i, :, :]) for i in range(self.n_obs)])
             )
         gc.collect()
-        print(self.image[:4, :4, :4])
+        print(f"self.image[:4, :4, :4]: {self.image[:4, :4, :4]}")
         sys.stdout.flush()
 
         # mask
@@ -421,6 +437,10 @@ class OutlierMap:
 
         # get the list of other ("j") observations
         jlist = list(np.where(self.ovmat[iobs, :] > 1e-3)[0])
+        print(f"iobs {iobs} has {len(jlist)} overlapping observations") #KL
+        # If there are no overlaps, break
+        if len(jlist) == 0:
+            return
         stack = np.full((1, Stn.sca_nside, Stn.sca_nside), np.nan, dtype=np.float32)
         ct = np.zeros((Stn.sca_nside, Stn.sca_nside), dtype=np.uint8)
         ns = 1
