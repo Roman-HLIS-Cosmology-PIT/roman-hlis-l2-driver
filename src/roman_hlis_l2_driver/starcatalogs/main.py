@@ -169,7 +169,7 @@ def stardata_to_mask_wcs(l2file, catalog, thresh, dp=256.0):
     return stardata_to_mask(use_filter, sca, x[trim], y[trim], thresh / subcatalog["eflux"][trim])
 
 
-def stardata_to_mask_manyfiles(l2files, catalog, thresh, dp=256.0, update=True):
+def stardata_to_mask_manyfiles(l2files, catalog, thresh, dp=256.0, update=True, extras=None):
     """
     Makes a spike mask for a star catalog in world coordinates.
 
@@ -186,6 +186,8 @@ def stardata_to_mask_manyfiles(l2files, catalog, thresh, dp=256.0, update=True):
     update : bool, optional
         Whether to update the "mask" 0x8 bit in the ASDF files. (You should only need to
         turn this off for diagnostics.)
+    extras: dict, optional
+        If given, add this to the spike_pars data in the processinfo.
 
     Returns
     -------
@@ -212,6 +214,8 @@ def stardata_to_mask_manyfiles(l2files, catalog, thresh, dp=256.0, update=True):
                 a["mask"] |= mask[j].astype(np.uint8) << 3
                 a["processinfo"]["spike_complete"] = True
                 a["processinfo"]["spike_pars"] = {"thresh": thresh, "dp": dp}
+                if extras is not None:
+                    a["processinfo"]["spike_pars"] |= extras
                 a.update()
 
     return mask
@@ -223,6 +227,8 @@ def spike_driver(
     dp=256.0,
     update=True,
     thresh_detect=50.0,
+    minarea=5,
+    thresh_flux=None,
     maximg=None,
     matchrad=0.0002777777777777778,
 ):
@@ -243,6 +249,10 @@ def spike_driver(
         turn this off for diagnostics.)
     thresh_detect : float, optional
         The threshold to use (in DN/s).
+    minarea : int, optional
+        Minimum number of pixels for a SEP detection.
+    thresh_flux : float, optional
+        If provided, sets a threshold for total star flux (in DN/s).
     maximg : int, optional
         Use a maximum of this many SCAs; primarily used for testing.
     matchrad : float, optional
@@ -260,12 +270,31 @@ def spike_driver(
 
     """
 
-    stars_recovered, idsca = brightobj_from_manyimg(infile_format, thresh=thresh_detect, clean=True)
+    stars_recovered, idsca = brightobj_from_manyimg(
+        infile_format, thresh=thresh_detect, minarea=minarea, clean=True
+    )
     stars_unique = stars_recovered[stars_recovered["nchild"] > 0]
+    if thresh_flux is not None:
+        stars_unique = stars_unique[stars_unique["eflux"] > thresh_flux]
+    else:
+        thresh_flux = 0.0
 
     l2files = [infile_format.format(*i) for i in idsca]
     print(l2files)
-    m = stardata_to_mask_manyfiles(l2files, stars_unique, thresh_mask, dp=dp, update=update)
+    m = stardata_to_mask_manyfiles(
+        l2files,
+        stars_unique,
+        thresh_mask,
+        dp=dp,
+        update=update,
+        extras={
+            "thresh_mask": thresh_mask,
+            "thresh_detect": thresh_detect,
+            "minarea": minarea,
+            "thresh_flux": thresh_flux,
+            "matchrad": matchrad,
+        },
+    )
     npix_mask = np.count_nonzero(m)
 
     return stars_unique, npix_mask

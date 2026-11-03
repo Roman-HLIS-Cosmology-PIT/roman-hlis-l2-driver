@@ -112,7 +112,7 @@ def encirc_center(arr, max_nside=16384):
     return pos[ipos, 1], pos[ipos, 0], rtest[ipos]
 
 
-def brightobj_from_scaimg(infile, obsid=-1, thresh=50.0, verbose=False):
+def brightobj_from_scaimg(infile, obsid=-1, thresh=50.0, minarea=5, verbose=False):
     """
     Extract bright objects from an SCA image.
 
@@ -124,6 +124,8 @@ def brightobj_from_scaimg(infile, obsid=-1, thresh=50.0, verbose=False):
         The observation ID (defaults to -1).
     thresh : float, optional
         The threshold to use (in DN/s).
+    minarea : int, optional
+        Minimum number of pixels for a SEP detection.
     verbose : bool, optional
         Whether to print the object catalogs and data to the terminal.
 
@@ -186,7 +188,7 @@ def brightobj_from_scaimg(infile, obsid=-1, thresh=50.0, verbose=False):
         print("alpha =", alpha, "pixels")
 
     # re-center and grow object if necessary
-    obj, map = sep.extract(img, thresh, mask=mask, deblend_cont=0.5, segmentation_map=True)
+    obj, map = sep.extract(img, thresh, minarea=minarea, mask=mask, deblend_cont=0.5, segmentation_map=True)
     N = np.shape(obj)[0]
     xcc = np.zeros(N)
     ycc = np.zeros(N)
@@ -307,7 +309,13 @@ def cluster(objcat, dist, verbose=False):
 
 
 def brightobj_from_manyimg(
-    infile_format, thresh=50.0, maximg=None, matchrad=0.0002777777777777778, verbose=False, clean=False
+    infile_format,
+    thresh=50.0,
+    minarea=5,
+    maximg=None,
+    matchrad=0.0002777777777777778,
+    verbose=False,
+    clean=False,
 ):
     """
     Extract bright objects from a group of images.
@@ -319,6 +327,8 @@ def brightobj_from_manyimg(
         ``infformat.format(obsid, sca)``
     thresh : float, optional
         The threshold to use (in DN/s).
+    minarea : int, optional
+        Minimum number of pixels for a SEP detection.
     maximg : int, optional
         Use a maximum of this many SCAs; primarily used for testing.
     matchrad : float, optional
@@ -387,7 +397,7 @@ def brightobj_from_manyimg(
     _is_init = False
     for j in range(len(idsca)):
         fn = infile_format.format(*idsca[j])
-        cat = brightobj_from_scaimg(fn, obsid=idsca[j][0], thresh=thresh, verbose=verbose)
+        cat = brightobj_from_scaimg(fn, obsid=idsca[j][0], thresh=thresh, minarea=minarea, verbose=verbose)
         if len(cat) > 1:
             if _is_init:
                 ccat = np.concatenate((ccat, cat))  # ccat will be defined before we get here # noqa: F821

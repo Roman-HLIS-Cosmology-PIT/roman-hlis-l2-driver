@@ -320,3 +320,7 @@ def test_mask_many(tmp_path):
     assert 130000 < tot_nmask < 134000
     assert np.allclose(starcat["ra"], np.array([16.49000774, 16.49500884]))
     assert np.allclose(starcat["dec"], np.array([-19.43800724, -19.43800151]))
+
+    # threshold check
+    starcat, tot_nmask = spike_driver(tmp_path + "/obs_{0:d}_{1:d}.asdf", 0.1, thresh_flux=1.0e7)
+    assert tot_nmask == 0
